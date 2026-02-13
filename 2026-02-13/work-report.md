@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-13 |
+| Last Updated | 2026-02-14 00:20:29 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -21,11 +21,11 @@
 ## 2. Implementation Steps
 | Step | Task Description | Started | Completed | Worker | Notes |
 |:---:|:---|:---:|:---:|:---:|:---|
-| **Phase 0** | **디렉토리 구조 재배치** | - | - | - | 기존 코드 보존 + 신규 디렉토리 준비 |
-| 0-1 | 기존 `backend/` → `backend-express/` 리네임 | - | - | - | |
-| 0-2 | 기존 `frontend/` → `frontend-react/` 리네임 | - | - | - | |
-| 0-3 | 기존 `docker-compose.yml` → `docker-compose.old.yml` 백업 | - | - | - | |
-| 0-4 | 기존 Docker 컨테이너 및 볼륨 정리 | - | - | - | |
+| **Phase 0** | **디렉토리 구조 재배치** | 2026-02-14 00:19:34 | 2026-02-14 00:20:29 | Claude | 기존 코드 보존 + 신규 디렉토리 준비 |
+| 0-1 | 기존 `backend/` → `backend-express/` 리네임 | - | 완료(사전) | - | 이미 리네임 완료 상태 |
+| 0-2 | 기존 `frontend/` → `frontend-react/` 리네임 | - | 완료(사전) | - | 이미 리네임 완료 상태 |
+| 0-3 | 기존 `docker-compose.yml` → `docker-compose.old.yml` 백업 | - | 완료(사전) | - | 이미 백업 완료 상태 |
+| 0-4 | 기존 Docker 컨테이너 및 볼륨 정리 | 2026-02-14 00:19:34 | 2026-02-14 00:20:29 | Claude | docker compose down -v 완료 |
 | **Phase 1** | **인프라 및 프로젝트 스캐폴딩** | - | - | - | Docker + Spring Boot + Vue.js 초기 구성 |
 | 1-1 | Docker Compose 구성 (PostgreSQL, Redis, BE, FE) | - | - | - | |
 | 1-2 | Spring Boot 4.0 + Java 21 프로젝트 생성 | - | - | - | |
@@ -120,7 +120,7 @@
 ## 3-1. Git Branch Tracking
 | Phase | Branch | Status | Merged |
 |:---:|:---|:---:|:---:|
-| 0 | `chore/directory-restructure` | - | - |
+| 0 | `chore/directory-restructure` | completed | PR #3 |
 | 1 | `feat/spring-boot-init` + `feat/vue-init` | - | - |
 | 2 | `feat/jpa-entities` | - | - |
 | 3 | `feat/auth-system` | - | - |
@@ -138,7 +138,13 @@
 |:---:|:---:|:---|:---|:---|
 
 ## 5. Key Implementation Notes
-(Per-phase details: code snippets, directory structures, config changes)
+
+### Phase 0: 디렉토리 구조 재배치
+- Step 0-1~0-3: 프로젝트 초기화 시 이미 완료된 상태 확인
+- Step 0-4: `docker compose -f docker-compose.old.yml down -v` 실행
+  - 제거된 컨테이너: `scripture-typer-frontend-1`, `scripture-typer-backend-1`, `scripture-typer-db-1`
+  - 제거된 볼륨: `scripture-typer_backend_generated`, `scripture-typer_postgres_data`
+  - 제거된 네트워크: `scripture-typer_default`
 
 ## 6. Scope Changes
 | # | Type | Description | Impact | Decision |
