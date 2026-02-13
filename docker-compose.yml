@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: scripture-typer-db
+    environment:
+      POSTGRES_DB: scripture_typer
+      POSTGRES_USER: scripture
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-scripture1234}
+    ports:
+      - "10432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scripture -d scripture_typer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: scripture-typer-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: scripture-typer-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/scripture_typer
+      SPRING_DATASOURCE_USERNAME: scripture
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-scripture1234}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: scripture-typer-frontend
+    ports:
+      - "3333:3333"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
