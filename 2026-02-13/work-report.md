@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-14 00:20:29 |
+| Last Updated | 2026-02-14 01:07:43 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -26,12 +26,12 @@
 | 0-2 | 기존 `frontend/` → `frontend-react/` 리네임 | - | 완료(사전) | - | 이미 리네임 완료 상태 |
 | 0-3 | 기존 `docker-compose.yml` → `docker-compose.old.yml` 백업 | - | 완료(사전) | - | 이미 백업 완료 상태 |
 | 0-4 | 기존 Docker 컨테이너 및 볼륨 정리 | 2026-02-14 00:19:34 | 2026-02-14 00:20:29 | Claude | docker compose down -v 완료 |
-| **Phase 1** | **인프라 및 프로젝트 스캐폴딩** | - | - | - | Docker + Spring Boot + Vue.js 초기 구성 |
-| 1-1 | Docker Compose 구성 (PostgreSQL, Redis, BE, FE) | - | - | - | |
-| 1-2 | Spring Boot 4.0 + Java 21 프로젝트 생성 | - | - | - | |
-| 1-3 | Vue.js 3 + Vite + TS 프로젝트 생성 | - | - | - | |
-| 1-4 | Atomic Design 디렉토리 구조 설계 | - | - | - | |
-| 1-5 | 공통 설정 (CORS, 환경변수, 프록시) | - | - | - | |
+| **Phase 1** | **인프라 및 프로젝트 스캐폴딩** | 2026-02-14 00:27:28 | 2026-02-14 01:07:43 | Claude | Docker + Spring Boot + Vue.js 초기 구성 |
+| 1-1 | Docker Compose 구성 (PostgreSQL, Redis, BE, FE) | 2026-02-14 00:27:28 | 2026-02-14 01:07:43 | Claude | 포트: FE 3333, BE 8080, DB 10432, Redis 6379 |
+| 1-2 | Spring Boot 4.0 + Java 21 프로젝트 생성 | 2026-02-14 00:27:28 | 2026-02-14 01:07:43 | Claude | Spring Initializr + Gradle Kotlin DSL |
+| 1-3 | Vue.js 3 + Vite + TS 프로젝트 생성 | 2026-02-14 00:27:28 | 2026-02-14 01:07:43 | Claude | Tailwind CSS v4 + Pinia + Vue Router + Axios |
+| 1-4 | Atomic Design 디렉토리 구조 설계 | 2026-02-14 00:27:28 | 2026-02-14 01:07:43 | Claude | atoms/molecules/organisms/templates/pages |
+| 1-5 | 공통 설정 (CORS, 환경변수, 프록시) | 2026-02-14 00:27:28 | 2026-02-14 01:07:43 | Claude | Vite proxy→BE, CORS config, SecurityConfig |
 | **Phase 2** | **DB 스키마 설계 및 JPA 엔티티** | - | - | - | 전체 도메인 모델 설계 |
 | 2-1 | JPA 엔티티: User, Role | - | - | - | |
 | 2-2 | JPA 엔티티: Bible | - | - | - | |
@@ -121,7 +121,7 @@
 | Phase | Branch | Status | Merged |
 |:---:|:---|:---:|:---:|
 | 0 | `chore/directory-restructure` | completed | PR #3 |
-| 1 | `feat/spring-boot-init` + `feat/vue-init` | - | - |
+| 1 | `feat/project-scaffolding` | completed | PR #4 |
 | 2 | `feat/jpa-entities` | - | - |
 | 3 | `feat/auth-system` | - | - |
 | 4 | `feat/bible-api` | - | - |
@@ -145,6 +145,17 @@
   - 제거된 컨테이너: `scripture-typer-frontend-1`, `scripture-typer-backend-1`, `scripture-typer-db-1`
   - 제거된 볼륨: `scripture-typer_backend_generated`, `scripture-typer_postgres_data`
   - 제거된 네트워크: `scripture-typer_default`
+
+### Phase 1: 인프라 및 프로젝트 스캐폴딩
+- Step 1-1: docker-compose.yml (PostgreSQL 16, Redis 7, Spring Boot, Vue.js)
+- Step 1-2: Spring Boot 4.0 + Java 21, Spring Initializr 기반, Gradle Kotlin DSL
+  - 의존성: web, data-jpa, security, data-redis, validation, flyway, postgresql
+- Step 1-3: Vue.js 3 + Vite + TypeScript, Tailwind CSS v4, Pinia, Vue Router, Axios
+- Step 1-4: Atomic Design 구조 (atoms/molecules/organisms/templates → pages)
+  - 추가 디렉토리: stores, composables, types, utils
+- Step 1-5: CorsConfig (localhost:3333 허용), SecurityConfig (Stateless JWT 준비), Vite proxy (/api → BE:8080)
+- Backend 패키지 구조: config, controller, domain, dto, repository, service, security
+- Dockerfile: backend (eclipse-temurin:21), frontend (node:20-alpine + nginx)
 
 ## 6. Scope Changes
 | # | Type | Description | Impact | Decision |
