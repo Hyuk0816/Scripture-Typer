@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+postgres_data/
+*.log
+.DS_Store
+
+# Legacy codebase (reference only)
+backend-express/
+frontend-react/
+docker-compose.old.yml
+
+scripture-typer-plan.md
+work-report.old.md
+BIBLE_202602082053.csv
