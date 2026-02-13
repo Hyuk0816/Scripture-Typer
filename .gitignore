@@ -13,3 +13,5 @@ docker-compose.old.yml
 scripture-typer-plan.md
 work-report.old.md
 BIBLE_202602082053.csv
+.mcp.json
+.envrc
