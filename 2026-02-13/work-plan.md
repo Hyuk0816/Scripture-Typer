@@ -37,6 +37,57 @@ Scripture-Typer/
 
 ---
 
+## Git 브랜치 전략
+
+### 브랜치 구조
+```
+main                          ← 안정 배포 브랜치 (PR 머지만 허용)
+├── feat/spring-boot-init     ← Phase 1: 백엔드 스캐폴딩
+├── feat/vue-init             ← Phase 1: 프론트엔드 스캐폴딩
+├── feat/jpa-entities         ← Phase 2: DB 스키마
+├── feat/auth-system          ← Phase 3: 인증 시스템
+├── feat/bible-api            ← Phase 4: 성경 데이터 API
+├── feat/reading-mode         ← Phase 5: 통독 기능
+├── feat/typing-mode          ← Phase 6: 필사 기능
+├── feat/dashboard-mypage     ← Phase 7: 대시보드/마이페이지
+├── feat/board                ← Phase 8: 게시판
+├── feat/gemini-chat          ← Phase 9: Gemini 채팅
+├── feat/redis-caching        ← Phase 10: Redis 캐싱
+└── chore/integration-test    ← Phase 11: 통합 테스트
+```
+
+### 접두사 규칙
+| 접두사 | 용도 | 예시 |
+|:---:|:---|:---|
+| `feat/` | 새 기능 구현 | `feat/auth-system`, `feat/board` |
+| `fix/` | 버그 수정 | `fix/jwt-token-expiry`, `fix/ime-handling` |
+| `refactor/` | 코드 리팩토링 (동작 변경 없음) | `refactor/progress-service` |
+| `chore/` | 설정, 빌드, 인프라 변경 | `chore/docker-compose`, `chore/ci-pipeline` |
+| `docs/` | 문서 작업 | `docs/api-specification`, `docs/readme` |
+| `style/` | UI/코드 스타일 변경 | `style/tailwind-theme` |
+| `test/` | 테스트 추가/수정 | `test/auth-integration` |
+| `hotfix/` | 긴급 수정 (main 직접 분기) | `hotfix/security-patch` |
+
+### 워크플로우
+1. `main`에서 Phase별 feature 브랜치 생성
+2. 브랜치에서 작업 → 커밋 (Step 단위)
+3. Phase 완료 시 `main`으로 PR 머지
+4. 한 Phase 내에서 세부 분기가 필요하면 `feat/auth-system` → `feat/auth-jwt-provider` 등 하위 브랜치 가능
+
+### 커밋 메시지 규칙
+```
+<접두사>: <구현 내용 요약>
+
+예시:
+feat: Spring Boot 4.0 프로젝트 초기 설정
+feat: User, Role JPA 엔티티 구현
+fix: JWT 토큰 만료 시 갱신 로직 수정
+chore: Docker Compose Redis 서비스 추가
+docs: API 명세 문서 작성
+```
+
+---
+
 ## Implementation Steps
 
 ### Phase 0: 디렉토리 구조 재배치
