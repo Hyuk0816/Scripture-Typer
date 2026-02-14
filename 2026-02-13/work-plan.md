@@ -70,16 +70,25 @@ main                          ← 안정 배포 브랜치 (PR 머지만 허용)
 
 ### 워크플로우
 1. `main`에서 Phase별 feature 브랜치 생성
-2. 브랜치에서 작업 → 커밋 (Step 단위)
+2. 브랜치에서 작업 → 커밋 (Step 단위 또는 연관 작업 단위)
 3. Phase 완료 시 `main`으로 PR 머지
 4. 한 Phase 내에서 세부 분기가 필요하면 `feat/auth-system` → `feat/auth-jwt-provider` 등 하위 브랜치 가능
+
+### 커밋 단위 규칙
+- **1 커밋 = 1 Step** 또는 **밀접하게 연관된 Step 묶음**
+- Phase 전체를 1 커밋으로 뭉치지 않음
+- 커밋 메시지만으로 변경 범위를 명확히 파악할 수 있어야 함
+- PR 리뷰 시 커밋별로 변경 추적이 가능해야 함
 
 ### 커밋 메시지 규칙
 ```
 <접두사>: <구현 내용 요약>
 
 예시:
+feat: docker-compose.yml 구성 (PostgreSQL, Redis, BE, FE)
 feat: Spring Boot 4.0 프로젝트 초기 설정
+feat: Vue.js 3 + Vite + TypeScript 프로젝트 초기 설정
+feat: Atomic Design 디렉토리 구조 및 공통 설정
 feat: User, Role JPA 엔티티 구현
 fix: JWT 토큰 만료 시 갱신 로직 수정
 chore: Docker Compose Redis 서비스 추가

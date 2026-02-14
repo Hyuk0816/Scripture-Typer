@@ -116,6 +116,7 @@
 |:---:|:---|:---|:---|
 | 1 | 기존 코드를 `backend-express/`, `frontend-react/`로 리네임하여 보존 | (A) 기존 코드 삭제 후 새로 시작 (B) Git 브랜치 분리 (C) `backend-new/` 등 별도 디렉토리 | 기존 로직(IME, 스마트 따옴표, SSE 스트리밍 등) 실시간 참조 필수. 신규 프로젝트가 최종 디렉토리명(`backend/`, `frontend/`) 사용하여 마이그레이션 완료 후 추가 작업 불필요 |
 | 2 | Phase별 feature 브랜치 전략 채택 | (A) main 직접 작업 (B) develop 브랜치 추가 (GitFlow) | Phase 단위로 feat/ 브랜치 생성 → main PR 머지. 1인 개발 규모에 적합한 단순 전략 |
+| 3 | 커밋 단위를 Step 또는 연관 작업 단위로 분리 | (A) Phase 단위 뭉텅이 커밋 (B) 파일 단위 개별 커밋 | 커밋 메시지만으로 변경 내용 파악 가능하도록. PR 리뷰 시 변경 범위 명확화 |
 
 ## 3-1. Git Branch Tracking
 | Phase | Branch | Status | Merged |
