@@ -4,6 +4,7 @@ dist/
 postgres_data/
 *.log
 .DS_Store
+.idea/
 
 # Legacy codebase (reference only)
 backend-express/
