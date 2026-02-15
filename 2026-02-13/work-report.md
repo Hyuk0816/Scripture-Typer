@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-14 01:07:43 |
+| Last Updated | 2026-02-16 01:18:54 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -32,15 +32,15 @@
 | 1-3 | Vue.js 3 + Vite + TS 프로젝트 생성 | 2026-02-14 00:27:28 | 2026-02-14 01:07:43 | Claude | Tailwind CSS v4 + Pinia + Vue Router + Axios |
 | 1-4 | Atomic Design 디렉토리 구조 설계 | 2026-02-14 00:27:28 | 2026-02-14 01:07:43 | Claude | atoms/molecules/organisms/templates/pages |
 | 1-5 | 공통 설정 (CORS, 환경변수, 프록시) | 2026-02-14 00:27:28 | 2026-02-14 01:07:43 | Claude | Vite proxy→BE, CORS config, SecurityConfig |
-| **Phase 2** | **DB 스키마 설계 및 JPA 엔티티** | - | - | - | 전체 도메인 모델 설계 |
-| 2-1 | JPA 엔티티: User, Role | - | - | - | |
-| 2-2 | JPA 엔티티: Bible | - | - | - | |
-| 2-3 | JPA 엔티티: UserProgress | - | - | - | |
-| 2-4 | JPA 엔티티: Board, Reply | - | - | - | |
-| 2-5 | JPA 엔티티: ChatSession, ChatMessage | - | - | - | |
-| 2-6 | JPA 엔티티: GeminiUsageLog | - | - | - | |
-| 2-7 | Flyway 마이그레이션 스크립트 생성 | - | - | - | |
-| 2-8 | Bible CSV 데이터 로딩 (Seed) | - | - | - | |
+| **Phase 2** | **DB 스키마 설계 및 JPA 엔티티** | 2026-02-16 00:59:48 | 2026-02-16 01:18:54 | Claude | 전체 도메인 모델 설계 |
+| 2-1 | JPA 엔티티: User, Role, UserStatus | 2026-02-16 00:59:48 | 2026-02-16 01:18:54 | Claude | Lombok + Builder, JPA Auditing |
+| 2-2 | JPA 엔티티: Bible, Testament | 2026-02-16 00:59:48 | 2026-02-16 01:18:54 | Claude | 기존 Prisma 스키마 동일 |
+| 2-3 | JPA 엔티티: UserProgress, ProgressMode | 2026-02-16 00:59:48 | 2026-02-16 01:18:54 | Claude | mode 필드 추가, User FK |
+| 2-4 | JPA 엔티티: Board, Reply, PostType | 2026-02-16 00:59:48 | 2026-02-16 01:18:54 | Claude | 역할 기반 접근 제한용 |
+| 2-5 | JPA 엔티티: ChatSession, ChatMessage | 2026-02-16 00:59:48 | 2026-02-16 01:18:54 | Claude | 기존 스키마 + User FK |
+| ~~2-6~~ | ~~JPA 엔티티: GeminiUsageLog~~ | - | - | - | Redis로 대체 (Decision #5) |
+| ~~2-7~~ | ~~Flyway 마이그레이션 스크립트 생성~~ | - | - | - | JPA ddl-auto로 대체 (Decision #6) |
+| ~~2-8~~ | ~~Bible CSV 데이터 로딩 (Seed)~~ | - | - | - | DataGrip 수동 import (Decision #7) |
 | **Phase 3** | **회원가입 및 인증 시스템** | - | - | - | JWT + Redis + Spring Security |
 | 3-1 | Spring Security + JWT 설정 | - | - | - | |
 | 3-2 | 회원가입 API | - | - | - | |
@@ -117,6 +117,35 @@
 | 1 | 기존 코드를 `backend-express/`, `frontend-react/`로 리네임하여 보존 | (A) 기존 코드 삭제 후 새로 시작 (B) Git 브랜치 분리 (C) `backend-new/` 등 별도 디렉토리 | 기존 로직(IME, 스마트 따옴표, SSE 스트리밍 등) 실시간 참조 필수. 신규 프로젝트가 최종 디렉토리명(`backend/`, `frontend/`) 사용하여 마이그레이션 완료 후 추가 작업 불필요 |
 | 2 | Phase별 feature 브랜치 전략 채택 | (A) main 직접 작업 (B) develop 브랜치 추가 (GitFlow) | Phase 단위로 feat/ 브랜치 생성 → main PR 머지. 1인 개발 규모에 적합한 단순 전략 |
 | 3 | 커밋 단위를 Step 또는 연관 작업 단위로 분리 | (A) Phase 단위 뭉텅이 커밋 (B) 파일 단위 개별 커밋 | 커밋 메시지만으로 변경 내용 파악 가능하도록. PR 리뷰 시 변경 범위 명확화 |
+| 4 | User 엔티티 필드 정의 (사용자 지정) | work-plan 원안의 Role enum 포함 구조 | 사용자가 직접 필드 구성 결정. 아래 상세 참조 |
+| 5 | Gemini 사용량 카운트를 Redis로 관리 | (A) DB GeminiUsageLog 테이블 (B) Redis + DB 병행 | 일일 제한 체크 목적이므로 Redis TTL로 충분. Step 2-6 제거, Phase 9에서 Redis 카운트 로직 구현 |
+| 6 | Flyway 제거, JPA ddl-auto=update 사용 | (A) Flyway SQL 버전 관리 | 1인 개발 + 신규 프로젝트, 운영 배포 시점에 Flyway 도입. Step 2-7 제거 |
+| 7 | Bible CSV 데이터를 DataGrip으로 수동 import | (A) CommandLineRunner (B) SQL COPY (C) data.sql | 코드 작성 불필요, DataGrip CSV Import 기능 활용. Step 2-8 제거 |
+
+### Decision #4 상세: User 엔티티 & 가입 DTO 정의
+
+**User 엔티티**
+| 필드 | 타입 | 비고 |
+|------|------|------|
+| id | Long (PK) | Auto-generated |
+| name | String | 이름 |
+| ttorae | Integer | 또래 |
+| phone | String | 전화번호 |
+| email | String | 이메일 |
+| password | String | BCrypt 암호화 |
+| role | Role enum | ADMIN, USER, PASTOR, MOKJANG (기본값: USER) |
+| status | UserStatus enum | PENDING, ACTIVE, INACTIVE (기본값: PENDING) |
+| created_at | DateTime | JPA Auditing 자동 기입 |
+| updated_at | DateTime | JPA Auditing 자동 기입 |
+
+**가입 신청 DTO (SignupRequest)**
+| 필드 | 타입 |
+|------|------|
+| name | String |
+| ttorae | Integer |
+| phone | String |
+| email | String |
+| password | String |
 
 ## 3-1. Git Branch Tracking
 | Phase | Branch | Status | Merged |
@@ -161,6 +190,9 @@
 ## 6. Scope Changes
 | # | Type | Description | Impact | Decision |
 |:---:|:---:|:---|:---|:---|
+| 1 | Removed | Step 2-6 GeminiUsageLog JPA 엔티티 | Phase 2에서 1개 Step 제거 | Gemini 일일 카운트를 Redis TTL로 관리. Phase 9에서 구현 |
+| 2 | Removed | Step 2-7 Flyway 마이그레이션 스크립트 | Phase 2에서 1개 Step 제거 | JPA ddl-auto=update로 스키마 자동 생성. 운영 배포 시 Flyway 도입 검토 |
+| 3 | Removed | Step 2-8 Bible CSV 데이터 로딩 | Phase 2에서 1개 Step 제거 | DataGrip CSV Import로 수동 처리 |
 
 Type: `Added` | `Changed` | `Removed` | `Deferred`
 
