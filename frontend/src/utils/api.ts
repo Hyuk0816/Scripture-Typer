@@ -7,6 +7,7 @@ import type {
   UserListResponse,
   UserStatus,
 } from '@/types/auth'
+import type { BooksResponse, ChapterResponse } from '@/types/bible'
 
 // --- Token utilities ---
 
@@ -149,6 +150,17 @@ export const adminApi = {
   },
   deactivateUser(id: number) {
     return api.patch<void>(`/admin/users/${id}/deactivate`)
+  },
+}
+
+// --- Bible API ---
+
+export const bibleApi = {
+  getBooks() {
+    return api.get<BooksResponse>('/bible/books')
+  },
+  getChapter(bookName: string, chapter: number) {
+    return api.get<ChapterResponse>(`/bible/${bookName}/${chapter}`)
   },
 }
 
