@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-16 13:16:39 |
+| Last Updated | 2026-02-16 14:18:12 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -41,7 +41,7 @@
 | ~~2-6~~ | ~~JPA 엔티티: GeminiUsageLog~~ | - | - | - | Redis로 대체 (Decision #5) |
 | ~~2-7~~ | ~~Flyway 마이그레이션 스크립트 생성~~ | - | - | - | JPA ddl-auto로 대체 (Decision #6) |
 | ~~2-8~~ | ~~Bible CSV 데이터 로딩 (Seed)~~ | - | - | - | DataGrip 수동 import (Decision #7) |
-| **Phase 3** | **회원가입 및 인증 시스템** | 2026-02-16 01:27:06 | - | Claude | JWT + Redis + Spring Security |
+| **Phase 3** | **회원가입 및 인증 시스템** | 2026-02-16 01:27:06 | 2026-02-16 14:18:12 | Claude | JWT + Redis + Spring Security + Vue 프론트엔드 |
 | 3-1 | Spring Security + JWT 설정 | 2026-02-16 01:27:06 | 2026-02-16 02:15:00 | Claude | JwtTokenProvider, JwtAuthenticationFilter, RefreshTokenService, SecurityConfig 수정 |
 | 3-2 | 회원가입 API | 2026-02-16 02:15:00 | 2026-02-16 03:30:00 | Claude | AuthController POST /api/auth/signup (201), SignupRequest DTO, 이메일 중복 체크 |
 | 3-3 | 로그인 API | 2026-02-16 02:15:00 | 2026-02-16 03:30:00 | Claude | POST /api/auth/login, BCrypt 검증, ACTIVE 상태 체크, JWT 발급 |
@@ -156,7 +156,7 @@
 | 0 | `chore/directory-restructure` | completed | PR #3 |
 | 1 | `feat/project-scaffolding` | completed | PR #4 |
 | 2 | `feat/jpa-entities` | completed | PR #6 |
-| 3 | `feat/auth-system` | in-progress | - |
+| 3 | `feat/auth-system` | completed | PR #7 |
 | 4 | `feat/bible-api` | - | - |
 | 5 | `feat/reading-mode` | - | - |
 | 6 | `feat/typing-mode` | - | - |
