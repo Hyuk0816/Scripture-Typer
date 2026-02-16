@@ -2,6 +2,10 @@ spring:
   application:
     name: scripture-typer-backend
 
+  docker:
+    compose:
+      enabled: false
+
   datasource:
     url: jdbc:postgresql://localhost:10432/scripture_typer
     username: scripture
@@ -27,6 +31,11 @@ spring:
   security:
     filter:
       order: 10
+
+jwt:
+  secret: c2NyaXB0dXJlLXR5cGVyLWp3dC1zZWNyZXQta2V5LTIwMjYtdmVyeS1sb25nLXNlY3JldC1rZXktZm9yLWhzMjU2
+  access-expiration: 3600000   # 1시간
+  refresh-expiration: 604800000 # 7일
 
 server:
   port: 8080
