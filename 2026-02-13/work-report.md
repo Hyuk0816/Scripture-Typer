@@ -121,6 +121,7 @@
 | 5 | Gemini 사용량 카운트를 Redis로 관리 | (A) DB GeminiUsageLog 테이블 (B) Redis + DB 병행 | 일일 제한 체크 목적이므로 Redis TTL로 충분. Step 2-6 제거, Phase 9에서 Redis 카운트 로직 구현 |
 | 6 | Flyway 제거, JPA ddl-auto=update 사용 | (A) Flyway SQL 버전 관리 | 1인 개발 + 신규 프로젝트, 운영 배포 시점에 Flyway 도입. Step 2-7 제거 |
 | 7 | Bible CSV 데이터를 DataGrip으로 수동 import | (A) CommandLineRunner (B) SQL COPY (C) data.sql | 코드 작성 불필요, DataGrip CSV Import 기능 활용. Step 2-8 제거 |
+| 8 | JWT 설정: jjwt 라이브러리, Access 1시간, Refresh 7일, Redis 저장 | - | 사용자 지정 |
 
 ### Decision #4 상세: User 엔티티 & 가입 DTO 정의
 
