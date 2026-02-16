@@ -14,9 +14,25 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'dashboard',
-      component: () => import('@/pages/DashboardPage.vue'),
+      component: () => import('@/components/templates/MainLayout.vue'),
       meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          name: 'dashboard',
+          component: () => import('@/pages/DashboardPage.vue'),
+        },
+        {
+          path: 'reading/:book/:chapter',
+          name: 'reading',
+          component: () => import('@/pages/ReadingPage.vue'),
+        },
+        {
+          path: 'typing/:book/:chapter',
+          name: 'typing',
+          component: () => import('@/pages/TypingPage.vue'),
+        },
+      ],
     },
     {
       path: '/login',
