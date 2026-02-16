@@ -56,15 +56,8 @@ async function handleSubmit() {
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
   } catch (err) {
-    if (axios.isAxiosError(err) && err.response) {
-      const { errorCode } = err.response.data
-      if (errorCode === 'AUTH_INVALID_CREDENTIALS') {
-        serverError.value = '이메일 또는 비밀번호가 올바르지 않습니다'
-      } else if (errorCode === 'AUTH_ACCOUNT_NOT_APPROVED') {
-        serverError.value = '관리자 승인 대기 중인 계정입니다'
-      } else {
-        serverError.value = '로그인에 실패했습니다. 다시 시도해주세요'
-      }
+    if (axios.isAxiosError(err) && err.response?.data?.message) {
+      serverError.value = err.response.data.message
     } else {
       serverError.value = '네트워크 오류가 발생했습니다'
     }

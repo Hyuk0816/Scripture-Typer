@@ -87,13 +87,8 @@ async function handleSubmit() {
     await authStore.signup(signupData)
     signupComplete.value = true
   } catch (err) {
-    if (axios.isAxiosError(err) && err.response) {
-      const { errorCode } = err.response.data
-      if (errorCode === 'AUTH_DUPLICATE_EMAIL') {
-        serverError.value = '이미 사용 중인 이메일입니다'
-      } else {
-        serverError.value = '회원가입에 실패했습니다. 다시 시도해주세요'
-      }
+    if (axios.isAxiosError(err) && err.response?.data?.message) {
+      serverError.value = err.response.data.message
     } else {
       serverError.value = '네트워크 오류가 발생했습니다'
     }

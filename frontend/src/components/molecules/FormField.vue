@@ -4,7 +4,7 @@ import InputField from '@/components/atoms/InputField.vue'
 import ErrorMessage from '@/components/atoms/ErrorMessage.vue'
 
 defineProps<{
-  modelValue: string
+  modelValue: string | number
   label: string
   type?: string
   placeholder?: string
@@ -15,7 +15,7 @@ defineProps<{
 }>()
 
 defineEmits<{
-  'update:modelValue': [value: string]
+  'update:modelValue': [value: string | number]
 }>()
 </script>
 

@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-16 14:18:12 |
+| Last Updated | 2026-02-16 23:53:42 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -53,12 +53,12 @@
 | 3-9 | Vue 관리자 회원 승인 페이지 | 2026-02-16 13:07:52 | 2026-02-16 13:16:05 | Claude | StatusFilterTabs + UserListTable + AdminTemplate + AdminUsersPage |
 | 3-10 | Vue 인증 상태 관리 (Pinia) | 2026-02-16 13:07:52 | 2026-02-16 13:16:05 | Claude | types, api (interceptors), Pinia authStore, 글로벌 스타일 |
 | 3-11 | Vue Router 가드 | 2026-02-16 13:07:52 | 2026-02-16 13:16:05 | Claude | beforeEach 가드, Route meta 타입 확장, initializeAuth |
-| **Phase 4** | **성경 데이터 및 사이드바** | - | - | - | 핵심 데이터 조회 |
-| 4-1 | 성경 책 목록 API | - | - | - | |
-| 4-2 | 성경 장 조회 API | - | - | - | |
-| 4-3 | Vue 사이드바 컴포넌트 | - | - | - | |
-| 4-4 | Vue 구약/신약 탭 | - | - | - | |
-| 4-5 | Pinia bibleStore | - | - | - | |
+| **Phase 4** | **성경 데이터 및 사이드바** | 2026-02-16 20:00:00 | 2026-02-16 23:53:42 | Claude | 백엔드 API + 프론트엔드 사이드바 + 라우팅 |
+| 4-1 | 성경 책 목록 API | 2026-02-16 20:00:00 | 2026-02-16 21:00:00 | Claude | BibleRepository (BookProjection), BibleService, BibleController |
+| 4-2 | 성경 장 조회 API | 2026-02-16 20:00:00 | 2026-02-16 21:00:00 | Claude | findByBookNameAndChapter + VerseResponse DTO |
+| 4-3 | Vue 사이드바 컴포넌트 | 2026-02-16 23:49:10 | 2026-02-16 23:53:42 | Claude | Sidebar, BookList, BookItem, ChapterGrid, AppHeader, MainLayout |
+| 4-4 | Vue 구약/신약 탭 | 2026-02-16 23:49:10 | 2026-02-16 23:53:42 | Claude | TestamentTabs molecule + uiStore |
+| 4-5 | Pinia bibleStore | 2026-02-16 23:49:10 | 2026-02-16 23:53:42 | Claude | bibleStore + uiStore + bibleApi + types/bible.ts |
 | **Phase 5** | **통독 기능 (신규)** | - | - | - | 읽기 전용 모드 |
 | 5-1 | 통독 모드 API 설계 | - | - | - | |
 | 5-2 | 통독 진도 저장 API | - | - | - | |
@@ -124,6 +124,9 @@
 | 8 | JWT 설정: jjwt 라이브러리, Access 1시간, Refresh 7일, Redis 저장 | - | 사용자 지정 |
 | 9 | 도메인별 구조화된 예외 처리 체계 | (A) 단일 enum에 모든 에러코드 (B) @ControllerAdvice만 사용 | ExceptionCode 인터페이스 → 도메인별 enum 구현 → BusinessException → 도메인별 구체 Exception. 사용자 지정 |
 | 10 | API 응답에 메시지 미포함 (HTTP 상태코드만 사용) | (A) 응답 body에 메시지 포함 | 메시지는 클라이언트 책임. void + @ResponseStatus 패턴 사용. 사용자 지정 |
+| 11 | 풀 라우팅(Option B) + 레이아웃 분리 | (A) 상태 기반 뷰 전환 (기존 React 방식) (C) 하이브리드 | URL 공유 가능, 브라우저 뒤로가기 지원. MainLayout(사이드바O) / AuthTemplate / AdminTemplate 분리 |
+| 12 | 통독/필사 진행률 완전 독립 | 공유 진행률 | 각 모드별 독립 API, 독립 store. 사용자 지정 |
+| 13 | Bible CSV를 CommandLineRunner + JDBC batch로 로딩 | (A) DataGrip 수동 import | 코드로 관리, 앱 시작 시 자동 로딩, count>0이면 skip (멱등성). Decision #7 변경 |
 
 ### Decision #4 상세: User 엔티티 & 가입 DTO 정의
 
@@ -249,6 +252,35 @@
   - Organisms 1개: UserListTable (사용자 테이블 + 승인/비활성화 버튼 + 로딩 상태)
   - Templates 1개: AdminTemplate (backdrop-blur 헤더 + 로그아웃 + 콘텐츠)
   - Pages 1개: AdminUsersPage (필터 탭 + 사용자 테이블 + 전체 회원 조회 후 클라이언트 필터링)
+
+### Phase 4: 성경 데이터 및 사이드바
+- **Step 4-1~4-2: 백엔드 Bible API**
+  - BibleRepository: interface projection (BookProjection) for aggregate query, entity return for chapter query
+  - BookSummaryResponse: record DTO with static from(BookProjection) factory
+  - BooksResponse: oldTestament/newTestament grouped by testament
+  - ChapterResponse: bookName + chapter + List<VerseResponse>
+  - BibleService: Collectors.groupingBy(testament) + stream().map() 패턴
+  - BibleController: GET /api/bible/books, GET /api/bible/{bookName}/{chapter}
+  - Architecture Decision #14: aggregate query → projection, entity query → entity return
+- **Step 4-3: Vue 사이드바 컴포넌트**
+  - Sidebar (organism): 모바일 백드롭 + 반응형 w-64/w-0 전환
+  - BookList (organism): 구약/신약 탭 상태에 따른 필터링, onMounted fetchBooks
+  - BookItem (organism): 아코디언 확장/축소, ChapterGrid 조건부 렌더링
+  - ChapterGrid (organism): 6열 그리드, 장 클릭 시 /reading/:book/:chapter 라우팅
+  - AppHeader (organism): 햄버거 메뉴, 로고, 책명+장 표시, 로그아웃
+  - MainLayout (template): Sidebar + AppHeader + <router-view /> 중첩 라우트
+- **Step 4-4: Vue 구약/신약 탭**
+  - TestamentTabs (molecule): OLD/NEW 전환, amber 액센트 활성 상태
+  - uiStore: sidebarOpen, activeTestament, expandedBook 상태 관리
+- **Step 4-5: Pinia bibleStore + 타입**
+  - types/bible.ts: BookSummary, BooksResponse, VerseData, ChapterResponse
+  - stores/bible.ts: fetchBooks(), oldTestament/newTestament/loading/error 상태
+  - stores/ui.ts: Testament 타입, sidebar/testament/expandedBook 상태
+  - utils/api.ts: bibleApi (getBooks, getChapter) 추가
+- **Router 업데이트**: Option B (풀 라우팅) 구현
+  - MainLayout을 부모 라우트로, Dashboard/Reading/Typing을 children으로 중첩
+  - /reading/:book/:chapter, /typing/:book/:chapter placeholder 페이지
+- **TypeScript 수정**: FormField/InputField modelValue를 string|number로 확장, decodeJwt null 체크 추가
 
 ## 6. Scope Changes
 | # | Type | Description | Impact | Decision |
