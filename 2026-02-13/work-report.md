@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-16 01:18:54 |
+| Last Updated | 2026-02-16 13:16:39 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -41,18 +41,18 @@
 | ~~2-6~~ | ~~JPA 엔티티: GeminiUsageLog~~ | - | - | - | Redis로 대체 (Decision #5) |
 | ~~2-7~~ | ~~Flyway 마이그레이션 스크립트 생성~~ | - | - | - | JPA ddl-auto로 대체 (Decision #6) |
 | ~~2-8~~ | ~~Bible CSV 데이터 로딩 (Seed)~~ | - | - | - | DataGrip 수동 import (Decision #7) |
-| **Phase 3** | **회원가입 및 인증 시스템** | - | - | - | JWT + Redis + Spring Security |
-| 3-1 | Spring Security + JWT 설정 | - | - | - | |
-| 3-2 | 회원가입 API | - | - | - | |
-| 3-3 | 로그인 API | - | - | - | |
-| 3-4 | 로그아웃 API | - | - | - | |
-| 3-5 | 토큰 갱신 API | - | - | - | |
-| 3-6 | 관리자 회원 승인 API | - | - | - | |
-| 3-7 | 관리자 회원 목록 API | - | - | - | |
-| 3-8 | Vue 로그인/회원가입 페이지 | - | - | - | |
-| 3-9 | Vue 관리자 회원 승인 페이지 | - | - | - | |
-| 3-10 | Vue 인증 상태 관리 (Pinia) | - | - | - | |
-| 3-11 | Vue Router 가드 | - | - | - | |
+| **Phase 3** | **회원가입 및 인증 시스템** | 2026-02-16 01:27:06 | - | Claude | JWT + Redis + Spring Security |
+| 3-1 | Spring Security + JWT 설정 | 2026-02-16 01:27:06 | 2026-02-16 02:15:00 | Claude | JwtTokenProvider, JwtAuthenticationFilter, RefreshTokenService, SecurityConfig 수정 |
+| 3-2 | 회원가입 API | 2026-02-16 02:15:00 | 2026-02-16 03:30:00 | Claude | AuthController POST /api/auth/signup (201), SignupRequest DTO, 이메일 중복 체크 |
+| 3-3 | 로그인 API | 2026-02-16 02:15:00 | 2026-02-16 03:30:00 | Claude | POST /api/auth/login, BCrypt 검증, ACTIVE 상태 체크, JWT 발급 |
+| 3-4 | 로그아웃 API | 2026-02-16 02:15:00 | 2026-02-16 03:30:00 | Claude | POST /api/auth/logout, Redis 리프레시 토큰 삭제 |
+| 3-5 | 토큰 갱신 API | 2026-02-16 02:15:00 | 2026-02-16 03:30:00 | Claude | POST /api/auth/refresh, 토큰 검증 후 재발급 |
+| 3-6 | 관리자 회원 승인 API | 2026-02-16 03:30:00 | 2026-02-16 04:00:00 | Claude | PATCH /api/admin/users/{id}/activate, /deactivate (204) |
+| 3-7 | 관리자 회원 목록 API | 2026-02-16 03:30:00 | 2026-02-16 04:00:00 | Claude | GET /api/admin/users?status= (200), UserListResponse DTO |
+| 3-8 | Vue 로그인/회원가입 페이지 | 2026-02-16 13:07:52 | 2026-02-16 13:16:05 | Claude | Atomic Design: Atoms 7, Molecules 2, Organisms 2, Templates 1, Pages 2 |
+| 3-9 | Vue 관리자 회원 승인 페이지 | 2026-02-16 13:07:52 | 2026-02-16 13:16:05 | Claude | StatusFilterTabs + UserListTable + AdminTemplate + AdminUsersPage |
+| 3-10 | Vue 인증 상태 관리 (Pinia) | 2026-02-16 13:07:52 | 2026-02-16 13:16:05 | Claude | types, api (interceptors), Pinia authStore, 글로벌 스타일 |
+| 3-11 | Vue Router 가드 | 2026-02-16 13:07:52 | 2026-02-16 13:16:05 | Claude | beforeEach 가드, Route meta 타입 확장, initializeAuth |
 | **Phase 4** | **성경 데이터 및 사이드바** | - | - | - | 핵심 데이터 조회 |
 | 4-1 | 성경 책 목록 API | - | - | - | |
 | 4-2 | 성경 장 조회 API | - | - | - | |
@@ -122,6 +122,8 @@
 | 6 | Flyway 제거, JPA ddl-auto=update 사용 | (A) Flyway SQL 버전 관리 | 1인 개발 + 신규 프로젝트, 운영 배포 시점에 Flyway 도입. Step 2-7 제거 |
 | 7 | Bible CSV 데이터를 DataGrip으로 수동 import | (A) CommandLineRunner (B) SQL COPY (C) data.sql | 코드 작성 불필요, DataGrip CSV Import 기능 활용. Step 2-8 제거 |
 | 8 | JWT 설정: jjwt 라이브러리, Access 1시간, Refresh 7일, Redis 저장 | - | 사용자 지정 |
+| 9 | 도메인별 구조화된 예외 처리 체계 | (A) 단일 enum에 모든 에러코드 (B) @ControllerAdvice만 사용 | ExceptionCode 인터페이스 → 도메인별 enum 구현 → BusinessException → 도메인별 구체 Exception. 사용자 지정 |
+| 10 | API 응답에 메시지 미포함 (HTTP 상태코드만 사용) | (A) 응답 body에 메시지 포함 | 메시지는 클라이언트 책임. void + @ResponseStatus 패턴 사용. 사용자 지정 |
 
 ### Decision #4 상세: User 엔티티 & 가입 DTO 정의
 
@@ -153,8 +155,8 @@
 |:---:|:---|:---:|:---:|
 | 0 | `chore/directory-restructure` | completed | PR #3 |
 | 1 | `feat/project-scaffolding` | completed | PR #4 |
-| 2 | `feat/jpa-entities` | - | - |
-| 3 | `feat/auth-system` | - | - |
+| 2 | `feat/jpa-entities` | completed | PR #6 |
+| 3 | `feat/auth-system` | in-progress | - |
 | 4 | `feat/bible-api` | - | - |
 | 5 | `feat/reading-mode` | - | - |
 | 6 | `feat/typing-mode` | - | - |
@@ -187,6 +189,66 @@
 - Step 1-5: CorsConfig (localhost:3333 허용), SecurityConfig (Stateless JWT 준비), Vite proxy (/api → BE:8080)
 - Backend 패키지 구조: config, controller, domain, dto, repository, service, security
 - Dockerfile: backend (eclipse-temurin:21), frontend (node:20-alpine + nginx)
+
+### Phase 2: DB 스키마 설계 및 JPA 엔티티
+- 전체 도메인 모델 6개 엔티티, 6개 enum 생성
+- Lombok: @Getter + 생성자 레벨 @Builder + @NoArgsConstructor(PROTECTED)
+- JPA Auditing: @CreatedDate, @LastModifiedDate 자동 기입
+- 도메인 패키지 분리: domain/{user, bible, progress, board, chat}
+- ddl-auto=update, Flyway 비활성화
+- 커밋 7개 (역할별 분리): entities, enums, config, repository, application.yml, Lombok, domain 재구성
+
+### Phase 3: 회원가입 및 인증 시스템 (백엔드)
+- **Step 3-1: JWT 설정**
+  - jjwt 0.12.6 (api + impl + jackson), Lombok compileOnly + annotationProcessor
+  - JwtTokenProvider: createAccessToken(userId, email, role), createRefreshToken(userId), validateToken(), getUserId(), getRole()
+  - JwtAuthenticationFilter: Bearer 토큰 추출 → SecurityContext 설정 (principal=userId, ROLE_ prefix)
+  - RefreshTokenService: Redis 기반 (key: "refresh:{userId}", TTL: 7일)
+  - SecurityConfig: JWT 필터 추가, /api/admin/** ADMIN 역할 제한, @EnableMethodSecurity
+- **Step 3-2~3-5: Auth API**
+  - POST /api/auth/signup → 201 (이메일 중복 체크, BCrypt 암호화)
+  - POST /api/auth/login → 200 + TokenResponse (credentials 검증, ACTIVE 상태 체크)
+  - POST /api/auth/logout → 204 (Redis 리프레시 토큰 삭제)
+  - POST /api/auth/refresh → 200 + TokenResponse (토큰 검증 후 재발급)
+  - DTO: SignupRequest (validation), LoginRequest, TokenResponse, RefreshRequest
+- **Step 3-6~3-7: Admin API**
+  - PATCH /api/admin/users/{id}/activate → 204
+  - PATCH /api/admin/users/{id}/deactivate → 204
+  - GET /api/admin/users?status= → 200 + List<UserListResponse>
+  - UserListResponse: User.from() 정적 팩토리 메서드
+- **예외 처리 체계**
+  - ExceptionCode 인터페이스 (getHttpStatus, getMessage, getErrorCode)
+  - BusinessException extends RuntimeException (ExceptionCode 주입)
+  - 도메인별 ExceptionCode enum: AuthExceptionCode(5개), UserExceptionCode(1개), BoardExceptionCode(3개), ChatExceptionCode(2개), ProgressExceptionCode(1개)
+  - 도메인별 구체 Exception: DuplicateEmailException, InvalidCredentialsException, AccountNotApprovedException, InvalidTokenException, UserNotFoundException 등
+  - GlobalExceptionHandler: BusinessException, MethodArgumentNotValidException 처리 → ErrorResponse(errorCode, message)
+- 커밋 6개 (역할별 분리): security, exception, auth-dto, auth-service/controller, admin, Lombok fix
+
+### Phase 3: 프론트엔드 인증 구현
+- **Step 3-10: 인증 상태 관리 (Foundation Layer)**
+  - index.html: lang="ko", Noto Serif KR Google Fonts preconnect + link, title "Scripture Typer"
+  - main.css: React index.css 글로벌 스타일 이식 (body, scrollbar, selection, animations)
+  - types/auth.ts: Role, UserStatus string literal union + 7개 인터페이스 (백엔드 DTO 1:1 매칭)
+  - utils/api.ts: Axios 인스턴스 + Bearer 토큰 interceptor + 401 자동 갱신 (isRefreshing + failedQueue) + authApi/adminApi
+  - stores/auth.ts: Pinia composable store (user, isAuthenticated, isAdmin, login, signup, logout, initializeAuth)
+  - JWT 디코딩: atob + JSON.parse (라이브러리 없이)
+- **Step 3-8: 로그인/회원가입 페이지 (Atomic Design)**
+  - Atoms 7개: InputField, ButtonPrimary, ButtonSecondary, ErrorMessage, Label, Badge, Spinner
+  - Molecules 2개: FormField (Label+InputField+ErrorMessage), StatusBadge (Badge + status/role 한글 매핑)
+  - Organisms 2개: LoginForm (이메일/비밀번호 + 클라이언트 검증 + API 호출 + 에러 표시), SignupForm (6필드 + 비밀번호 확인 + 가입 완료 "승인 대기" 메시지)
+  - Templates 1개: AuthTemplate (중앙 정렬 카드 + 로고)
+  - Pages 2개: LoginPage, SignupPage
+  - 디자인 토큰: amber gradient 버튼, rounded-2xl 카드, #faf9f6 배경
+- **Step 3-11: Vue Router 가드**
+  - 라우트 4개: /, /login, /signup, /admin/users
+  - Route meta 타입 확장: requiresAuth, requiresAdmin, guest
+  - beforeEach 가드: 미인증→/login?redirect=, guest+인증→/, requiresAdmin+비ADMIN→/
+  - main.ts: Pinia 초기화 후 authStore.initializeAuth() 호출
+- **Step 3-9: 관리자 회원 승인 페이지**
+  - Molecules 1개: StatusFilterTabs (전체/대기중/활성/비활성 + 카운트)
+  - Organisms 1개: UserListTable (사용자 테이블 + 승인/비활성화 버튼 + 로딩 상태)
+  - Templates 1개: AdminTemplate (backdrop-blur 헤더 + 로그아웃 + 콘텐츠)
+  - Pages 1개: AdminUsersPage (필터 탭 + 사용자 테이블 + 전체 회원 조회 후 클라이언트 필터링)
 
 ## 6. Scope Changes
 | # | Type | Description | Impact | Decision |
