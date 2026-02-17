@@ -8,6 +8,11 @@ import type {
   UserStatus,
 } from '@/types/auth'
 import type { BooksResponse, ChapterResponse } from '@/types/bible'
+import type {
+  SaveReadingProgressRequest,
+  CompleteReadingRequest,
+  ReadingProgressResponse,
+} from '@/types/progress'
 
 // --- Token utilities ---
 
@@ -161,6 +166,23 @@ export const bibleApi = {
   },
   getChapter(bookName: string, chapter: number) {
     return api.get<ChapterResponse>(`/bible/${bookName}/${chapter}`)
+  },
+}
+
+// --- Progress API ---
+
+export const progressApi = {
+  saveReadingProgress(data: SaveReadingProgressRequest) {
+    return api.post<void>('/progress/reading/save', data)
+  },
+  completeReading(data: CompleteReadingRequest) {
+    return api.post<void>('/progress/reading/complete', data)
+  },
+  getReadingProgress(bookName: string, chapter: number) {
+    return api.get<ReadingProgressResponse>(`/progress/reading/${bookName}/${chapter}`)
+  },
+  getAllReadingProgress() {
+    return api.get<ReadingProgressResponse[]>('/progress/reading')
   },
 }
 
