@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
+import ModeTabs from '@/components/molecules/ModeTabs.vue'
 
 const uiStore = useUiStore()
 const authStore = useAuthStore()
@@ -41,7 +42,17 @@ async function handleLogout() {
       {{ bookName }} {{ chapter }}장
     </span>
 
+    <ModeTabs />
+
     <div class="flex-1" />
+
+    <router-link
+      v-if="authStore.isAdmin"
+      to="/admin/users"
+      class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+    >
+      관리자
+    </router-link>
 
     <button
       @click="handleLogout"
