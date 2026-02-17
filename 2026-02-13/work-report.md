@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-16 23:53:42 |
+| Last Updated | 2026-02-17 02:01:09 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -59,12 +59,12 @@
 | 4-3 | Vue 사이드바 컴포넌트 | 2026-02-16 23:49:10 | 2026-02-16 23:53:42 | Claude | Sidebar, BookList, BookItem, ChapterGrid, AppHeader, MainLayout |
 | 4-4 | Vue 구약/신약 탭 | 2026-02-16 23:49:10 | 2026-02-16 23:53:42 | Claude | TestamentTabs molecule + uiStore |
 | 4-5 | Pinia bibleStore | 2026-02-16 23:49:10 | 2026-02-16 23:53:42 | Claude | bibleStore + uiStore + bibleApi + types/bible.ts |
-| **Phase 5** | **통독 기능 (신규)** | - | - | - | 읽기 전용 모드 |
-| 5-1 | 통독 모드 API 설계 | - | - | - | |
-| 5-2 | 통독 진도 저장 API | - | - | - | |
-| 5-3 | 통독 완료 API | - | - | - | |
-| 5-4 | Vue 통독 뷰 컴포넌트 | - | - | - | |
-| 5-5 | Vue 통독/필사 메뉴 전환 | - | - | - | |
+| **Phase 5** | **통독 기능 (신규)** | 2026-02-17 00:15:02 | 2026-02-17 02:01:09 | Claude | Redis Write-Behind + Read-Through + Vue 통독 뷰 |
+| 5-1 | 통독 모드 API 설계 | 2026-02-17 00:15:02 | 2026-02-17 00:50:00 | Claude | ProgressCacheService, ProgressService, ProgressController, ProgressSyncScheduler |
+| 5-2 | 통독 진도 저장 API | 2026-02-17 00:15:02 | 2026-02-17 00:50:00 | Claude | POST /api/progress/reading/save (Redis only), GET 조회 (Read-Through) |
+| 5-3 | 통독 완료 API | 2026-02-17 00:15:02 | 2026-02-17 00:50:00 | Claude | POST /api/progress/reading/complete (DB 직접), 3시간 스케줄러 sync |
+| 5-4 | Vue 통독 뷰 컴포넌트 | 2026-02-17 01:56:54 | 2026-02-17 02:01:09 | Claude | ReadingPage, VerseList, PerPageSelector, PageNavigator, readingStore, progressApi |
+| 5-5 | Vue 통독/필사 메뉴 전환 | 2026-02-17 01:56:54 | 2026-02-17 02:01:09 | Claude | ModeTabs molecule + AppHeader 통합 |
 | **Phase 6** | **필사 기능 (기존 마이그레이션)** | - | - | - | 핵심: 글자별 색상, IME |
 | 6-1 | 필사 진도 저장 API | - | - | - | |
 | 6-2 | 필사 완료 API | - | - | - | |
@@ -127,6 +127,7 @@
 | 11 | 풀 라우팅(Option B) + 레이아웃 분리 | (A) 상태 기반 뷰 전환 (기존 React 방식) (C) 하이브리드 | URL 공유 가능, 브라우저 뒤로가기 지원. MainLayout(사이드바O) / AuthTemplate / AdminTemplate 분리 |
 | 12 | 통독/필사 진행률 완전 독립 | 공유 진행률 | 각 모드별 독립 API, 독립 store. 사용자 지정 |
 | 13 | Bible CSV를 CommandLineRunner + JDBC batch로 로딩 | (A) DataGrip 수동 import | 코드로 관리, 앱 시작 시 자동 로딩, count>0이면 skip (멱등성). Decision #7 변경 |
+| 14 | ~~통독 뷰 반응형 분기: 웹=페이지네이션, 모바일=스크롤~~ → 통독 뷰 모바일/데스크톱 통일 페이지네이션 | (A) 통일된 스크롤 뷰 ~~(B) 통일된 페이지네이션~~ | 모바일 무한 스크롤 시 진도 추적 불가 문제 → 모바일/데스크톱 모두 1절/5절/10절 페이지네이션으로 통일. 사용자 지정 |
 
 ### Decision #4 상세: User 엔티티 & 가입 DTO 정의
 
@@ -281,6 +282,27 @@
   - MainLayout을 부모 라우트로, Dashboard/Reading/Typing을 children으로 중첩
   - /reading/:book/:chapter, /typing/:book/:chapter placeholder 페이지
 - **TypeScript 수정**: FormField/InputField modelValue를 string|number로 확장, decodeJwt null 체크 추가
+
+### Phase 5: 통독 기능
+- **Step 5-1~5-3: 백엔드 Progress API (Redis Write-Behind + Read-Through)**
+  - ProgressCacheService: Redis Hash 진도 저장 (`progress:{userId}:READING:{bookName}:{chapter}`), dirty set 관리
+  - ProgressService: saveReadingProgress(Redis only), completeReading(DB 직접 + Redis sync), getReadingProgress(Read-Through), syncToDb(key parsing)
+  - ProgressController: 4 REST endpoints (POST save/complete, GET single/all)
+  - ProgressSyncScheduler: `@Scheduled(cron = "0 0 */3 * * *")` 3시간 주기, dirty→syncing RENAME 패턴
+  - DTO: SaveReadingProgressRequest, CompleteReadingRequest, ReadingProgressResponse
+  - 테스트: 28개 (ProgressServiceTest 12, ProgressCacheServiceTest 8, ProgressSyncSchedulerTest 3, ProgressControllerTest 5)
+  - Spring Boot 4.0: `@MockitoBean` 사용, `spring-boot-starter-webmvc-test` 별도 모듈, `@WebMvcTest` CSRF `.with(csrf())` 필수
+- **Step 5-4: Vue 통독 뷰 컴포넌트**
+  - types/progress.ts: 백엔드 DTO 매칭 (SaveReadingProgressRequest, CompleteReadingRequest, ReadingProgressResponse)
+  - utils/api.ts: progressApi (saveReadingProgress, completeReading, getReadingProgress, getAllReadingProgress)
+  - stores/reading.ts: Pinia readingStore (fetchChapter, saveProgress, completeChapter, pagination)
+  - ReadingPage.vue: Desktop=페이지네이션(1/5/10절), Mobile=전체스크롤, 통독완료 버튼
+  - VerseList organism: 절 번호 + 내용, 읽은 절 하이라이트
+  - PerPageSelector molecule: 1/5/10절 전환
+  - PageNavigator molecule: 페이지네이션 UI
+- **Step 5-5: Vue 통독/필사 메뉴 전환**
+  - ModeTabs molecule: 통독/필사 탭 (route 기반 현재 모드 감지, 같은 책+장으로 모드 전환)
+  - AppHeader에 ModeTabs 통합
 
 ## 6. Scope Changes
 | # | Type | Description | Impact | Decision |
