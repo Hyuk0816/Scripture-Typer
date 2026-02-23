@@ -12,6 +12,9 @@ import type {
   SaveReadingProgressRequest,
   CompleteReadingRequest,
   ReadingProgressResponse,
+  SaveTypingProgressRequest,
+  CompleteTypingRequest,
+  TypingProgressResponse,
 } from '@/types/progress'
 
 // --- Token utilities ---
@@ -183,6 +186,21 @@ export const progressApi = {
   },
   getAllReadingProgress() {
     return api.get<ReadingProgressResponse[]>('/progress/reading')
+  },
+  saveTypingProgress(data: SaveTypingProgressRequest) {
+    return api.post<void>('/progress/typing/save', data)
+  },
+  completeTyping(data: CompleteTypingRequest) {
+    return api.post<void>('/progress/typing/complete', data)
+  },
+  getTypingProgress(bookName: string, chapter: number) {
+    return api.get<TypingProgressResponse>(`/progress/typing/${bookName}/${chapter}`)
+  },
+  getLatestTypingProgress() {
+    return api.get<TypingProgressResponse>('/progress/typing/latest')
+  },
+  getAllTypingProgress() {
+    return api.get<TypingProgressResponse[]>('/progress/typing')
   },
 }
 
