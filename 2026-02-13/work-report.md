@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-18 00:44:04 |
+| Last Updated | 2026-02-23 22:02:38 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -65,15 +65,15 @@
 | 5-3 | 통독 완료 API | 2026-02-17 00:15:02 | 2026-02-17 00:50:00 | Claude | POST /api/progress/reading/complete (DB 직접), 3시간 스케줄러 sync |
 | 5-4 | Vue 통독 뷰 컴포넌트 | 2026-02-17 01:56:54 | 2026-02-17 02:01:09 | Claude | ReadingPage, VerseList, PerPageSelector, PageNavigator, readingStore, progressApi |
 | 5-5 | Vue 통독/필사 메뉴 전환 | 2026-02-17 01:56:54 | 2026-02-17 02:01:09 | Claude | ModeTabs molecule + AppHeader 통합 |
-| **Phase 6** | **필사 기능 (기존 마이그레이션)** | - | - | - | 핵심: 글자별 색상, IME |
-| 6-1 | 필사 진도 저장 API | - | - | - | |
-| 6-2 | 필사 완료 API | - | - | - | |
-| 6-3 | 최근 진도 조회 API | - | - | - | |
-| 6-4 | 전체 진도 조회 API | - | - | - | |
-| 6-5 | Vue 타이핑 영역 컴포넌트 | - | - | - | |
-| 6-6 | Vue 완료 모달 | - | - | - | |
-| 6-7 | Pinia typingStore | - | - | - | |
-| 6-8 | Pinia progressStore | - | - | - | |
+| **Phase 6** | **필사 기능 (기존 마이그레이션)** | 2026-02-23 21:54:04 | - | Claude | 핵심: 글자별 색상, IME |
+| 6-1 | 필사 진도 저장 API | 2026-02-23 21:54:04 | 2026-02-23 21:58:00 | Claude | DTO 3개 + Repository + Service 5 메서드 + Controller 5 엔드포인트 |
+| 6-2 | 필사 완료 API | 2026-02-23 21:54:04 | 2026-02-23 21:58:00 | Claude | completeTyping DB 즉시 동기화 + readCount++ |
+| 6-3 | 최근 진도 조회 API | 2026-02-23 21:54:04 | 2026-02-23 21:58:00 | Claude | getLatestTypingProgress + totalVerses |
+| 6-4 | 전체 진도 조회 API | 2026-02-23 21:54:04 | 2026-02-23 21:58:00 | Claude | getAllTypingProgress + totalVerses |
+| 6-5 | Vue 타이핑 영역 컴포넌트 | 2026-02-23 21:58:00 | 2026-02-23 22:02:38 | Claude | VerseDisplay, TypingInput (IME+색상), VerseProgress, TypingPage |
+| 6-6 | Vue 완료 모달 | 2026-02-23 21:58:00 | 2026-02-23 22:02:38 | Claude | BadgeDisplay + CompletionModal |
+| 6-7 | Pinia typingStore | 2026-02-23 21:58:00 | 2026-02-23 22:02:38 | Claude | 기존 React typingStore 이식, fetchChapter/saveProgress/completeVerse/completeChapter |
+| 6-8 | Pinia progressStore → Phase 7 defer | - | - | - | typingStore가 직접 API 호출 |
 | **Phase 7** | **대시보드 및 마이페이지** | - | - | - | 통독/필사 통합 통계 |
 | 7-1 | Vue 대시보드 페이지 | - | - | - | |
 | 7-2 | Vue 마이페이지 | - | - | - | |
@@ -163,7 +163,7 @@
 | 3 | `feat/auth-system` | completed | PR #7 |
 | 4 | `feat/bible-api` | completed | PR #9 |
 | 5 | `feat/reading-mode` | completed | PR #10 |
-| 6 | `feat/typing-mode` | - | - |
+| 6 | `feat/typing-mode` | in progress | - |
 | 7 | `feat/dashboard-mypage` | - | - |
 | 8 | `feat/board` | - | - |
 | 9 | `feat/gemini-chat` | - | - |
@@ -304,12 +304,35 @@
   - ModeTabs molecule: 통독/필사 탭 (route 기반 현재 모드 감지, 같은 책+장으로 모드 전환)
   - AppHeader에 ModeTabs 통합
 
+### Phase 6: 필사 기능 (기존 마이그레이션)
+- **Step 6-1~6-4: 백엔드 Typing API**
+  - DTO 3개: SaveTypingProgressRequest, CompleteTypingRequest, TypingProgressResponse (totalVerses 포함)
+  - BibleRepository: countByBookNameAndChapter 메서드 추가
+  - ProgressRepository: findFirstByUserIdAndModeOrderByUpdatedAtDesc, findByUserIdAndModeOrderByUpdatedAtDesc 추가
+  - ProgressService: BibleRepository 주입 + 5개 typing 메서드 (saveTypingProgress, completeTyping, getTypingProgress, getLatestTypingProgress, getAllTypingProgress)
+  - ProgressController: 5개 typing 엔드포인트 (POST save/complete, GET single/latest/all)
+  - ProgressCacheService, ProgressSyncScheduler 변경 없음 (이미 mode 파라미터 지원)
+- **Step 6-7: 프론트엔드 기반**
+  - types/progress.ts: SaveTypingProgressRequest, CompleteTypingRequest, TypingProgressResponse 타입 추가
+  - utils/api.ts: progressApi에 5개 typing API 함수 추가
+  - stores/typing.ts: Pinia composable store (React typingStore 이식, fetchChapter 병렬 호출, IME 상태 관리)
+- **Step 6-5~6-6: Vue 컴포넌트**
+  - atoms/BadgeDisplay.vue: 골드/실버/브론즈 배지 (readCount 기반)
+  - molecules/VerseProgress.vue: 현재절/총절 + 회독수 배지
+  - organisms/VerseDisplay.vue: 현재 절 번호 + 내용 읽기 전용 표시
+  - organisms/TypingInput.vue: **핵심 컴포넌트** - IME compositionstart/end 핸들링, 글자별 색상(green/red/blue), 스마트 따옴표 정규화, 커서 위치 추적, 투명 textarea 오버레이
+  - organisms/CompletionModal.vue: 완료 모달 (홈으로/다음장 버튼, BadgeDisplay 통합)
+  - pages/TypingPage.vue: 플레이스홀더 교체, route params watch + fetchChapter, 로딩/빈상태/타이핑/완료 조건부 렌더링
+- **ChapterGrid 모드 인식 수정**: route.path 기반 reading/typing 모드 감지하여 올바른 경로로 라우팅
+- **Step 6-8**: progressStore는 Phase 7(대시보드)로 defer
+
 ## 6. Scope Changes
 | # | Type | Description | Impact | Decision |
 |:---:|:---:|:---|:---|:---|
 | 1 | Removed | Step 2-6 GeminiUsageLog JPA 엔티티 | Phase 2에서 1개 Step 제거 | Gemini 일일 카운트를 Redis TTL로 관리. Phase 9에서 구현 |
 | 2 | Removed | Step 2-7 Flyway 마이그레이션 스크립트 | Phase 2에서 1개 Step 제거 | JPA ddl-auto=update로 스키마 자동 생성. 운영 배포 시 Flyway 도입 검토 |
 | 3 | Removed | Step 2-8 Bible CSV 데이터 로딩 | Phase 2에서 1개 Step 제거 | DataGrip CSV Import로 수동 처리 |
+| 4 | Deferred | Step 6-8 Pinia progressStore | Phase 7로 이동 | typingStore가 직접 API 호출하므로 Phase 6에서 불필요, Phase 7(대시보드) 통합 통계에서 구현 |
 
 Type: `Added` | `Changed` | `Removed` | `Deferred`
 
