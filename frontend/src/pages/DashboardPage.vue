@@ -98,9 +98,9 @@ function navigateReading() {
       </div>
 
       <!-- 필사 랭킹 Top 3 -->
-      <div v-if="progressStore.topRanking.length > 0" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
         <h2 class="text-lg font-semibold text-gray-700 mb-4">필사 랭킹</h2>
-        <div class="space-y-3">
+        <div v-if="progressStore.topRanking.length > 0" class="space-y-3">
           <div
             v-for="entry in progressStore.topRanking"
             :key="entry.userId"
@@ -117,6 +117,7 @@ function navigateReading() {
             <span class="text-sm text-gray-500">{{ entry.completedChapters }}장 완료</span>
           </div>
         </div>
+        <p v-else class="text-sm text-gray-400 text-center py-2">아직 필사를 완료한 사람이 없습니다</p>
       </div>
     </template>
   </div>

@@ -27,10 +27,29 @@ public class ProgressService {
     private final BibleRepository bibleRepository;
 
     /**
-     * 통독 진도 저장 (Redis만 - 빠른 응답)
+     * 통독 진도 저장 (Redis + DB upsert)
      */
+    @Transactional
     public void saveReadingProgress(Long userId, String bookName, int chapter, int lastReadVerse) {
         progressCacheService.saveLastVerse(userId, ProgressMode.READING.name(), bookName, chapter, lastReadVerse);
+
+        // DB에도 upsert하여 대시보드/마이페이지에서 즉시 조회 가능
+        UserProgress progress = progressRepository.findByUserIdAndModeAndBookNameAndChapter(
+                userId, ProgressMode.READING, bookName, chapter
+        ).orElseGet(() -> {
+            var user = userRepository.findById(userId)
+                    .orElseThrow(UserNotFoundException::new);
+            return UserProgress.builder()
+                    .user(user)
+                    .mode(ProgressMode.READING)
+                    .bookName(bookName)
+                    .chapter(chapter)
+                    .lastTypedVerse(0)
+                    .build();
+        });
+
+        progress.updateLastTypedVerse(lastReadVerse);
+        progressRepository.save(progress);
     }
 
     /**
@@ -119,10 +138,29 @@ public class ProgressService {
     // ===== Typing Progress =====
 
     /**
-     * 필사 진도 저장 (Redis만 - 빠른 응답)
+     * 필사 진도 저장 (Redis + DB upsert)
      */
+    @Transactional
     public void saveTypingProgress(Long userId, String bookName, int chapter, int lastTypedVerse) {
         progressCacheService.saveLastVerse(userId, ProgressMode.TYPING.name(), bookName, chapter, lastTypedVerse);
+
+        // DB에도 upsert하여 대시보드/마이페이지에서 즉시 조회 가능
+        UserProgress progress = progressRepository.findByUserIdAndModeAndBookNameAndChapter(
+                userId, ProgressMode.TYPING, bookName, chapter
+        ).orElseGet(() -> {
+            var user = userRepository.findById(userId)
+                    .orElseThrow(UserNotFoundException::new);
+            return UserProgress.builder()
+                    .user(user)
+                    .mode(ProgressMode.TYPING)
+                    .bookName(bookName)
+                    .chapter(chapter)
+                    .lastTypedVerse(0)
+                    .build();
+        });
+
+        progress.updateLastTypedVerse(lastTypedVerse);
+        progressRepository.save(progress);
     }
 
     /**
