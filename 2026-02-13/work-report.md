@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-23 22:02:38 |
+| Last Updated | 2026-02-23 22:09:34 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -65,7 +65,7 @@
 | 5-3 | 통독 완료 API | 2026-02-17 00:15:02 | 2026-02-17 00:50:00 | Claude | POST /api/progress/reading/complete (DB 직접), 3시간 스케줄러 sync |
 | 5-4 | Vue 통독 뷰 컴포넌트 | 2026-02-17 01:56:54 | 2026-02-17 02:01:09 | Claude | ReadingPage, VerseList, PerPageSelector, PageNavigator, readingStore, progressApi |
 | 5-5 | Vue 통독/필사 메뉴 전환 | 2026-02-17 01:56:54 | 2026-02-17 02:01:09 | Claude | ModeTabs molecule + AppHeader 통합 |
-| **Phase 6** | **필사 기능 (기존 마이그레이션)** | 2026-02-23 21:54:04 | - | Claude | 핵심: 글자별 색상, IME |
+| **Phase 6** | **필사 기능 (기존 마이그레이션)** | 2026-02-23 21:54:04 | 2026-02-23 22:09:34 | Claude | 핵심: 글자별 색상, IME |
 | 6-1 | 필사 진도 저장 API | 2026-02-23 21:54:04 | 2026-02-23 21:58:00 | Claude | DTO 3개 + Repository + Service 5 메서드 + Controller 5 엔드포인트 |
 | 6-2 | 필사 완료 API | 2026-02-23 21:54:04 | 2026-02-23 21:58:00 | Claude | completeTyping DB 즉시 동기화 + readCount++ |
 | 6-3 | 최근 진도 조회 API | 2026-02-23 21:54:04 | 2026-02-23 21:58:00 | Claude | getLatestTypingProgress + totalVerses |
@@ -163,7 +163,7 @@
 | 3 | `feat/auth-system` | completed | PR #7 |
 | 4 | `feat/bible-api` | completed | PR #9 |
 | 5 | `feat/reading-mode` | completed | PR #10 |
-| 6 | `feat/typing-mode` | in progress | - |
+| 6 | `feat/typing-mode` | completed | PR #11 |
 | 7 | `feat/dashboard-mypage` | - | - |
 | 8 | `feat/board` | - | - |
 | 9 | `feat/gemini-chat` | - | - |
