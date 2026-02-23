@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,29 +29,10 @@ public class ProgressService {
     private final BibleRepository bibleRepository;
 
     /**
-     * 통독 진도 저장 (Redis + DB upsert)
+     * 통독 진도 저장 (Redis만 - 빠른 응답)
      */
-    @Transactional
     public void saveReadingProgress(Long userId, String bookName, int chapter, int lastReadVerse) {
         progressCacheService.saveLastVerse(userId, ProgressMode.READING.name(), bookName, chapter, lastReadVerse);
-
-        // DB에도 upsert하여 대시보드/마이페이지에서 즉시 조회 가능
-        UserProgress progress = progressRepository.findByUserIdAndModeAndBookNameAndChapter(
-                userId, ProgressMode.READING, bookName, chapter
-        ).orElseGet(() -> {
-            var user = userRepository.findById(userId)
-                    .orElseThrow(UserNotFoundException::new);
-            return UserProgress.builder()
-                    .user(user)
-                    .mode(ProgressMode.READING)
-                    .bookName(bookName)
-                    .chapter(chapter)
-                    .lastTypedVerse(0)
-                    .build();
-        });
-
-        progress.updateLastTypedVerse(lastReadVerse);
-        progressRepository.save(progress);
     }
 
     /**
@@ -115,52 +98,63 @@ public class ProgressService {
     }
 
     /**
-     * 가장 최근 통독 진도 1건
+     * 가장 최근 통독 진도 1건 (DB + Redis 병합)
      */
     @Transactional(readOnly = true)
     public ReadingProgressResponse getLatestReadingProgress(Long userId) {
-        return progressRepository.findFirstByUserIdAndModeOrderByUpdatedAtDesc(userId, ProgressMode.READING)
+        ReadingProgressResponse dbResult = progressRepository
+                .findFirstByUserIdAndModeOrderByUpdatedAtDesc(userId, ProgressMode.READING)
                 .map(ReadingProgressResponse::from)
                 .orElse(null);
+
+        // Redis에서 가장 최근 통독 키 찾기
+        ReadingProgressResponse redisResult = findLatestReadingFromRedis(userId);
+
+        if (dbResult == null) return redisResult;
+        if (redisResult == null) return dbResult;
+        // Redis가 항상 최신 (save가 Redis에만 쓰므로)
+        return redisResult;
     }
 
     /**
-     * 전체 통독 진도 목록 (DB 조회)
+     * 전체 통독 진도 목록 (DB + Redis 병합)
      */
     @Transactional(readOnly = true)
     public List<ReadingProgressResponse> getAllReadingProgress(Long userId) {
-        return progressRepository.findByUserIdAndMode(userId, ProgressMode.READING)
-                .stream()
-                .map(ReadingProgressResponse::from)
-                .toList();
+        // DB 데이터를 기본으로
+        Map<String, ReadingProgressResponse> merged = new HashMap<>();
+        for (UserProgress p : progressRepository.findByUserIdAndMode(userId, ProgressMode.READING)) {
+            String key = p.getBookName() + ":" + p.getChapter();
+            merged.put(key, ReadingProgressResponse.from(p));
+        }
+
+        // Redis 데이터로 덮어쓰기 (더 최신)
+        Map<String, Map<Object, Object>> redisData =
+                progressCacheService.findAllUserProgress(userId, ProgressMode.READING.name());
+        for (Map.Entry<String, Map<Object, Object>> entry : redisData.entrySet()) {
+            String[] parsed = ProgressCacheService.parseKey(entry.getKey());
+            if (parsed == null) continue;
+            String bookName = parsed[0];
+            int chapter = Integer.parseInt(parsed[1]);
+            Map<Object, Object> data = entry.getValue();
+            int lastVerse = data.containsKey("lastVerse")
+                    ? Integer.parseInt((String) data.get("lastVerse")) : 0;
+            int readCount = data.containsKey("readCount")
+                    ? Integer.parseInt((String) data.get("readCount")) : 0;
+            merged.put(bookName + ":" + chapter,
+                    new ReadingProgressResponse(bookName, chapter, lastVerse, readCount));
+        }
+
+        return new ArrayList<>(merged.values());
     }
 
     // ===== Typing Progress =====
 
     /**
-     * 필사 진도 저장 (Redis + DB upsert)
+     * 필사 진도 저장 (Redis만 - 빠른 응답)
      */
-    @Transactional
     public void saveTypingProgress(Long userId, String bookName, int chapter, int lastTypedVerse) {
         progressCacheService.saveLastVerse(userId, ProgressMode.TYPING.name(), bookName, chapter, lastTypedVerse);
-
-        // DB에도 upsert하여 대시보드/마이페이지에서 즉시 조회 가능
-        UserProgress progress = progressRepository.findByUserIdAndModeAndBookNameAndChapter(
-                userId, ProgressMode.TYPING, bookName, chapter
-        ).orElseGet(() -> {
-            var user = userRepository.findById(userId)
-                    .orElseThrow(UserNotFoundException::new);
-            return UserProgress.builder()
-                    .user(user)
-                    .mode(ProgressMode.TYPING)
-                    .bookName(bookName)
-                    .chapter(chapter)
-                    .lastTypedVerse(0)
-                    .build();
-        });
-
-        progress.updateLastTypedVerse(lastTypedVerse);
-        progressRepository.save(progress);
     }
 
     /**
@@ -227,32 +221,107 @@ public class ProgressService {
     }
 
     /**
-     * 가장 최근 필사 진도 1건 + totalVerses
+     * 가장 최근 필사 진도 1건 (DB + Redis 병합) + totalVerses
      */
     @Transactional(readOnly = true)
     public TypingProgressResponse getLatestTypingProgress(Long userId) {
-        return progressRepository.findFirstByUserIdAndModeOrderByUpdatedAtDesc(userId, ProgressMode.TYPING)
+        TypingProgressResponse dbResult = progressRepository
+                .findFirstByUserIdAndModeOrderByUpdatedAtDesc(userId, ProgressMode.TYPING)
                 .map(progress -> {
                     int totalVerses = bibleRepository.countByBookNameAndChapter(
                             progress.getBookName(), progress.getChapter());
                     return TypingProgressResponse.from(progress, totalVerses);
                 })
                 .orElse(null);
+
+        TypingProgressResponse redisResult = findLatestTypingFromRedis(userId);
+
+        if (dbResult == null) return redisResult;
+        if (redisResult == null) return dbResult;
+        return redisResult;
     }
 
     /**
-     * 전체 필사 진도 목록 + totalVerses
+     * 전체 필사 진도 목록 (DB + Redis 병합) + totalVerses
      */
     @Transactional(readOnly = true)
     public List<TypingProgressResponse> getAllTypingProgress(Long userId) {
-        return progressRepository.findByUserIdAndModeOrderByUpdatedAtDesc(userId, ProgressMode.TYPING)
-                .stream()
-                .map(progress -> {
-                    int totalVerses = bibleRepository.countByBookNameAndChapter(
-                            progress.getBookName(), progress.getChapter());
-                    return TypingProgressResponse.from(progress, totalVerses);
-                })
-                .toList();
+        // DB 데이터를 기본으로
+        Map<String, TypingProgressResponse> merged = new HashMap<>();
+        for (UserProgress p : progressRepository.findByUserIdAndMode(userId, ProgressMode.TYPING)) {
+            String key = p.getBookName() + ":" + p.getChapter();
+            int totalVerses = bibleRepository.countByBookNameAndChapter(p.getBookName(), p.getChapter());
+            merged.put(key, TypingProgressResponse.from(p, totalVerses));
+        }
+
+        // Redis 데이터로 덮어쓰기 (더 최신)
+        Map<String, Map<Object, Object>> redisData =
+                progressCacheService.findAllUserProgress(userId, ProgressMode.TYPING.name());
+        for (Map.Entry<String, Map<Object, Object>> entry : redisData.entrySet()) {
+            String[] parsed = ProgressCacheService.parseKey(entry.getKey());
+            if (parsed == null) continue;
+            String bookName = parsed[0];
+            int chapter = Integer.parseInt(parsed[1]);
+            Map<Object, Object> data = entry.getValue();
+            int lastVerse = data.containsKey("lastVerse")
+                    ? Integer.parseInt((String) data.get("lastVerse")) : 0;
+            int readCount = data.containsKey("readCount")
+                    ? Integer.parseInt((String) data.get("readCount")) : 0;
+            int totalVerses = bibleRepository.countByBookNameAndChapter(bookName, chapter);
+            merged.put(bookName + ":" + chapter,
+                    new TypingProgressResponse(bookName, chapter, lastVerse, readCount, totalVerses));
+        }
+
+        return new ArrayList<>(merged.values());
+    }
+
+    // ===== Private Helpers =====
+
+    /**
+     * Redis latest 키로 가장 최근 통독 진도 조회 (O(1))
+     */
+    private ReadingProgressResponse findLatestReadingFromRedis(Long userId) {
+        String latest = progressCacheService.getLatestKey(userId, ProgressMode.READING.name());
+        if (latest == null) return null;
+
+        String[] parts = latest.split(":", 2);
+        if (parts.length < 2) return null;
+
+        String bookName = parts[0];
+        int chapter = Integer.parseInt(parts[1]);
+        Map<Object, Object> data = progressCacheService.getProgress(
+                userId, ProgressMode.READING.name(), bookName, chapter);
+        if (data.isEmpty()) return null;
+
+        int lastVerse = data.containsKey("lastVerse")
+                ? Integer.parseInt((String) data.get("lastVerse")) : 0;
+        int readCount = data.containsKey("readCount")
+                ? Integer.parseInt((String) data.get("readCount")) : 0;
+        return new ReadingProgressResponse(bookName, chapter, lastVerse, readCount);
+    }
+
+    /**
+     * Redis latest 키로 가장 최근 필사 진도 조회 (O(1))
+     */
+    private TypingProgressResponse findLatestTypingFromRedis(Long userId) {
+        String latest = progressCacheService.getLatestKey(userId, ProgressMode.TYPING.name());
+        if (latest == null) return null;
+
+        String[] parts = latest.split(":", 2);
+        if (parts.length < 2) return null;
+
+        String bookName = parts[0];
+        int chapter = Integer.parseInt(parts[1]);
+        Map<Object, Object> data = progressCacheService.getProgress(
+                userId, ProgressMode.TYPING.name(), bookName, chapter);
+        if (data.isEmpty()) return null;
+
+        int lastVerse = data.containsKey("lastVerse")
+                ? Integer.parseInt((String) data.get("lastVerse")) : 0;
+        int readCount = data.containsKey("readCount")
+                ? Integer.parseInt((String) data.get("readCount")) : 0;
+        int totalVerses = bibleRepository.countByBookNameAndChapter(bookName, chapter);
+        return new TypingProgressResponse(bookName, chapter, lastVerse, readCount, totalVerses);
     }
 
     /**
