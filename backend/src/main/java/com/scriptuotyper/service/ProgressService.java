@@ -96,6 +96,16 @@ public class ProgressService {
     }
 
     /**
+     * 가장 최근 통독 진도 1건
+     */
+    @Transactional(readOnly = true)
+    public ReadingProgressResponse getLatestReadingProgress(Long userId) {
+        return progressRepository.findFirstByUserIdAndModeOrderByUpdatedAtDesc(userId, ProgressMode.READING)
+                .map(ReadingProgressResponse::from)
+                .orElse(null);
+    }
+
+    /**
      * 전체 통독 진도 목록 (DB 조회)
      */
     @Transactional(readOnly = true)
@@ -143,6 +153,9 @@ public class ProgressService {
         }
 
         progressRepository.save(progress);
+
+        // 랭킹 ZSET 업데이트
+        progressCacheService.incrementTypingRanking(userId);
 
         String key = progressCacheService.buildKey(userId, ProgressMode.TYPING.name(), bookName, chapter);
         progressCacheService.setProgress(key, progress.getLastTypedVerse(), progress.getReadCount());

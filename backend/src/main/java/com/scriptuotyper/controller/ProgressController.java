@@ -50,6 +50,13 @@ public class ProgressController {
         return progressService.getReadingProgress(userId, bookName, chapter);
     }
 
+    @GetMapping("/reading/latest")
+    public ReadingProgressResponse getLatestReadingProgress(
+            @AuthenticationPrincipal Long userId
+    ) {
+        return progressService.getLatestReadingProgress(userId);
+    }
+
     @GetMapping("/reading")
     public List<ReadingProgressResponse> getAllReadingProgress(
             @AuthenticationPrincipal Long userId
