@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-17 02:01:09 |
+| Last Updated | 2026-02-18 00:44:04 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -161,8 +161,8 @@
 | 1 | `feat/project-scaffolding` | completed | PR #4 |
 | 2 | `feat/jpa-entities` | completed | PR #6 |
 | 3 | `feat/auth-system` | completed | PR #7 |
-| 4 | `feat/bible-api` | - | - |
-| 5 | `feat/reading-mode` | - | - |
+| 4 | `feat/bible-api` | completed | PR #9 |
+| 5 | `feat/reading-mode` | completed | PR #10 |
 | 6 | `feat/typing-mode` | - | - |
 | 7 | `feat/dashboard-mypage` | - | - |
 | 8 | `feat/board` | - | - |
