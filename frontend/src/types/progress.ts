@@ -15,3 +15,22 @@ export interface ReadingProgressResponse {
   lastReadVerse: number
   readCount: number
 }
+
+export interface SaveTypingProgressRequest {
+  bookName: string
+  chapter: number
+  lastTypedVerse: number
+}
+
+export interface CompleteTypingRequest {
+  bookName: string
+  chapter: number
+}
+
+export interface TypingProgressResponse {
+  bookName: string
+  chapter: number
+  lastTypedVerse: number
+  readCount: number
+  totalVerses: number
+}

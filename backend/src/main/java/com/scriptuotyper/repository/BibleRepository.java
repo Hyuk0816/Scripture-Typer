@@ -14,6 +14,8 @@ public interface BibleRepository extends JpaRepository<Bible, Long> {
 
     List<Bible> findByBookNameAndChapterOrderByVerseAsc(String bookName, int chapter);
 
+    int countByBookNameAndChapter(String bookName, int chapter);
+
     interface BookProjection {
         String getBookName();
         Integer getBookOrder();

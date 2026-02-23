@@ -4,6 +4,8 @@ import com.scriptuotyper.common.exception.user.UserNotFoundException;
 import com.scriptuotyper.domain.progress.ProgressMode;
 import com.scriptuotyper.domain.progress.UserProgress;
 import com.scriptuotyper.dto.progress.ReadingProgressResponse;
+import com.scriptuotyper.dto.progress.TypingProgressResponse;
+import com.scriptuotyper.repository.BibleRepository;
 import com.scriptuotyper.repository.ProgressRepository;
 import com.scriptuotyper.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class ProgressService {
     private final ProgressRepository progressRepository;
     private final ProgressCacheService progressCacheService;
     private final UserRepository userRepository;
+    private final BibleRepository bibleRepository;
 
     /**
      * 통독 진도 저장 (Redis만 - 빠른 응답)
@@ -100,6 +103,104 @@ public class ProgressService {
         return progressRepository.findByUserIdAndMode(userId, ProgressMode.READING)
                 .stream()
                 .map(ReadingProgressResponse::from)
+                .toList();
+    }
+
+    // ===== Typing Progress =====
+
+    /**
+     * 필사 진도 저장 (Redis만 - 빠른 응답)
+     */
+    public void saveTypingProgress(Long userId, String bookName, int chapter, int lastTypedVerse) {
+        progressCacheService.saveLastVerse(userId, ProgressMode.TYPING.name(), bookName, chapter, lastTypedVerse);
+    }
+
+    /**
+     * 필사 완료 (readCount 증가 + 즉시 DB 동기화)
+     */
+    @Transactional
+    public void completeTyping(Long userId, String bookName, int chapter) {
+        UserProgress progress = progressRepository.findByUserIdAndModeAndBookNameAndChapter(
+                userId, ProgressMode.TYPING, bookName, chapter
+        ).orElseGet(() -> {
+            var user = userRepository.findById(userId)
+                    .orElseThrow(UserNotFoundException::new);
+            return UserProgress.builder()
+                    .user(user)
+                    .mode(ProgressMode.TYPING)
+                    .bookName(bookName)
+                    .chapter(chapter)
+                    .lastTypedVerse(0)
+                    .build();
+        });
+
+        progress.incrementReadCount();
+
+        Map<Object, Object> cached = progressCacheService.getProgress(
+                userId, ProgressMode.TYPING.name(), bookName, chapter);
+        if (!cached.isEmpty() && cached.containsKey("lastVerse")) {
+            progress.updateLastTypedVerse(Integer.parseInt((String) cached.get("lastVerse")));
+        }
+
+        progressRepository.save(progress);
+
+        String key = progressCacheService.buildKey(userId, ProgressMode.TYPING.name(), bookName, chapter);
+        progressCacheService.setProgress(key, progress.getLastTypedVerse(), progress.getReadCount());
+    }
+
+    /**
+     * 단일 필사 진도 조회 (Read-Through: Redis → DB → 기본값) + totalVerses
+     */
+    @Transactional(readOnly = true)
+    public TypingProgressResponse getTypingProgress(Long userId, String bookName, int chapter) {
+        int totalVerses = bibleRepository.countByBookNameAndChapter(bookName, chapter);
+
+        Map<Object, Object> cached = progressCacheService.getProgress(
+                userId, ProgressMode.TYPING.name(), bookName, chapter);
+        if (!cached.isEmpty()) {
+            int lastVerse = cached.containsKey("lastVerse")
+                    ? Integer.parseInt((String) cached.get("lastVerse")) : 0;
+            int readCount = cached.containsKey("readCount")
+                    ? Integer.parseInt((String) cached.get("readCount")) : 0;
+            return new TypingProgressResponse(bookName, chapter, lastVerse, readCount, totalVerses);
+        }
+
+        return progressRepository.findByUserIdAndModeAndBookNameAndChapter(
+                userId, ProgressMode.TYPING, bookName, chapter
+        ).map(progress -> {
+            String key = progressCacheService.buildKey(
+                    userId, ProgressMode.TYPING.name(), bookName, chapter);
+            progressCacheService.setProgress(key, progress.getLastTypedVerse(), progress.getReadCount());
+            return TypingProgressResponse.from(progress, totalVerses);
+        }).orElse(new TypingProgressResponse(bookName, chapter, 0, 0, totalVerses));
+    }
+
+    /**
+     * 가장 최근 필사 진도 1건 + totalVerses
+     */
+    @Transactional(readOnly = true)
+    public TypingProgressResponse getLatestTypingProgress(Long userId) {
+        return progressRepository.findFirstByUserIdAndModeOrderByUpdatedAtDesc(userId, ProgressMode.TYPING)
+                .map(progress -> {
+                    int totalVerses = bibleRepository.countByBookNameAndChapter(
+                            progress.getBookName(), progress.getChapter());
+                    return TypingProgressResponse.from(progress, totalVerses);
+                })
+                .orElse(null);
+    }
+
+    /**
+     * 전체 필사 진도 목록 + totalVerses
+     */
+    @Transactional(readOnly = true)
+    public List<TypingProgressResponse> getAllTypingProgress(Long userId) {
+        return progressRepository.findByUserIdAndModeOrderByUpdatedAtDesc(userId, ProgressMode.TYPING)
+                .stream()
+                .map(progress -> {
+                    int totalVerses = bibleRepository.countByBookNameAndChapter(
+                            progress.getBookName(), progress.getChapter());
+                    return TypingProgressResponse.from(progress, totalVerses);
+                })
                 .toList();
     }
 

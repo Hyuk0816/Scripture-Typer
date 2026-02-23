@@ -15,7 +15,8 @@ const chapters = computed(() =>
 )
 
 function handleChapterClick(chapter: number) {
-  router.push(`/reading/${props.bookName}/${chapter}`)
+  const currentMode = route.path.startsWith('/typing') ? 'typing' : 'reading'
+  router.push(`/${currentMode}/${props.bookName}/${chapter}`)
 }
 
 function isActive(ch: number): boolean {
