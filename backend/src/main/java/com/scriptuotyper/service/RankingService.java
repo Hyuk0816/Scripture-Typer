@@ -34,6 +34,7 @@ public class RankingService {
 
         // userId 목록 추출
         List<Long> userIds = ranked.stream()
+                .filter(t -> t.getValue() != null)
                 .map(t -> Long.parseLong(t.getValue()))
                 .toList();
 
@@ -44,6 +45,7 @@ public class RankingService {
         List<RankingEntryResponse> result = new ArrayList<>();
         int rank = 1;
         for (TypedTuple<String> tuple : ranked) {
+            if (tuple.getValue() == null) continue;
             Long userId = Long.parseLong(tuple.getValue());
             int score = tuple.getScore() != null ? tuple.getScore().intValue() : 0;
             User user = userMap.get(userId);

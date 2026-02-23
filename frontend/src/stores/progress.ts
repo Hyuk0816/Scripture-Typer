@@ -58,6 +58,8 @@ export const useProgressStore = defineStore('progress', () => {
     try {
       const { data } = await rankingApi.getTypingRanking(limit)
       topRanking.value = data
+    } catch (e) {
+      console.error('fetchTopRanking failed:', e)
     } finally {
       loadingRanking.value = false
     }
