@@ -19,6 +19,7 @@ public class ProgressCacheService {
     private static final String KEY_PREFIX = "progress:";
     private static final String DIRTY_SET = "progress:dirty";
     private static final String SYNCING_SET = "progress:syncing";
+    private static final String RANKING_TYPING_KEY = "ranking:typing";
 
     private final StringRedisTemplate redisTemplate;
 
@@ -81,5 +82,12 @@ public class ProgressCacheService {
      */
     public void clearSyncingSet() {
         redisTemplate.delete(SYNCING_SET);
+    }
+
+    /**
+     * 필사 완료 시 랭킹 ZSET 점수 증가
+     */
+    public void incrementTypingRanking(Long userId) {
+        redisTemplate.opsForZSet().incrementScore(RANKING_TYPING_KEY, String.valueOf(userId), 1.0);
     }
 }
