@@ -34,3 +34,10 @@ export interface TypingProgressResponse {
   readCount: number
   totalVerses: number
 }
+
+export interface RankingEntryResponse {
+  rank: number
+  userId: number
+  name: string
+  completedChapters: number
+}
