@@ -13,4 +13,8 @@ public interface ProgressRepository extends JpaRepository<UserProgress, Long> {
             Long userId, ProgressMode mode, String bookName, Integer chapter);
 
     List<UserProgress> findByUserIdAndMode(Long userId, ProgressMode mode);
+
+    Optional<UserProgress> findFirstByUserIdAndModeOrderByUpdatedAtDesc(Long userId, ProgressMode mode);
+
+    List<UserProgress> findByUserIdAndModeOrderByUpdatedAtDesc(Long userId, ProgressMode mode);
 }
