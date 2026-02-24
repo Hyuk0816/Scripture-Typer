@@ -32,6 +32,11 @@ const router = createRouter({
           name: 'typing',
           component: () => import('@/pages/TypingPage.vue'),
         },
+        {
+          path: 'mypage',
+          name: 'mypage',
+          component: () => import('@/pages/MyPagePage.vue'),
+        },
       ],
     },
     {

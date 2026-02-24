@@ -15,6 +15,7 @@ import type {
   SaveTypingProgressRequest,
   CompleteTypingRequest,
   TypingProgressResponse,
+  RankingEntryResponse,
 } from '@/types/progress'
 
 // --- Token utilities ---
@@ -184,6 +185,9 @@ export const progressApi = {
   getReadingProgress(bookName: string, chapter: number) {
     return api.get<ReadingProgressResponse>(`/progress/reading/${bookName}/${chapter}`)
   },
+  getLatestReadingProgress() {
+    return api.get<ReadingProgressResponse>('/progress/reading/latest')
+  },
   getAllReadingProgress() {
     return api.get<ReadingProgressResponse[]>('/progress/reading')
   },
@@ -201,6 +205,15 @@ export const progressApi = {
   },
   getAllTypingProgress() {
     return api.get<TypingProgressResponse[]>('/progress/typing')
+  },
+}
+
+// --- Ranking API ---
+
+export const rankingApi = {
+  getTypingRanking(limit?: number) {
+    const params = limit ? { limit } : undefined
+    return api.get<RankingEntryResponse[]>('/ranking/typing', { params })
   },
 }
 

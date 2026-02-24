@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-23 22:09:34 |
+| Last Updated | 2026-02-23 23:02:31 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -74,10 +74,12 @@
 | 6-6 | Vue 완료 모달 | 2026-02-23 21:58:00 | 2026-02-23 22:02:38 | Claude | BadgeDisplay + CompletionModal |
 | 6-7 | Pinia typingStore | 2026-02-23 21:58:00 | 2026-02-23 22:02:38 | Claude | 기존 React typingStore 이식, fetchChapter/saveProgress/completeVerse/completeChapter |
 | 6-8 | Pinia progressStore → Phase 7 defer | - | - | - | typingStore가 직접 API 호출 |
-| **Phase 7** | **대시보드 및 마이페이지** | - | - | - | 통독/필사 통합 통계 |
-| 7-1 | Vue 대시보드 페이지 | - | - | - | |
-| 7-2 | Vue 마이페이지 | - | - | - | |
-| 7-3 | 통계 API | - | - | - | |
+| **Phase 7** | **대시보드 및 마이페이지** | 2026-02-23 22:44:08 | 2026-02-23 23:02:31 | Claude | 대시보드+마이페이지+랭킹 |
+| 7-1 | 백엔드: reading/latest API + 랭킹 ZSET + 랭킹 API | 2026-02-23 22:44:08 | 2026-02-23 22:55:00 | Claude | 커밋 3개 분리 |
+| 7-2 | 프론트: progressStore + ranking API 타입/클라이언트 | 2026-02-23 22:55:00 | 2026-02-23 22:58:00 | Claude | types, api, stores/progress.ts |
+| 7-3 | 대시보드 페이지 (최근 진도 카드 + 랭킹 Top 3) | 2026-02-23 22:58:00 | 2026-02-23 22:59:00 | Claude | DashboardPage.vue 교체 |
+| 7-4 | 마이페이지 (통독/필사 탭 + 통계 + 진도 목록) | 2026-02-23 22:59:00 | 2026-02-23 23:00:00 | Claude | MyPagePage.vue 생성 |
+| 7-5 | 라우터 + 헤더 마이페이지 연결 | 2026-02-23 23:00:00 | 2026-02-23 23:02:31 | Claude | /mypage 라우트 + AppHeader 링크 |
 | **Phase 8** | **게시판 기능 (신규)** | - | - | - | 역할 기반 접근 제한 |
 | 8-1 | 게시글 CRUD API | - | - | - | |
 | 8-2 | 게시글 목록 조회 (페이지네이션) | - | - | - | |
@@ -164,7 +166,7 @@
 | 4 | `feat/bible-api` | completed | PR #9 |
 | 5 | `feat/reading-mode` | completed | PR #10 |
 | 6 | `feat/typing-mode` | completed | PR #11 |
-| 7 | `feat/dashboard-mypage` | - | - |
+| 7 | `feat/dashboard-mypage` | completed | - |
 | 8 | `feat/board` | - | - |
 | 9 | `feat/gemini-chat` | - | - |
 | 10 | `feat/redis-caching` | - | - |
@@ -325,6 +327,41 @@
   - pages/TypingPage.vue: 플레이스홀더 교체, route params watch + fetchChapter, 로딩/빈상태/타이핑/완료 조건부 렌더링
 - **ChapterGrid 모드 인식 수정**: route.path 기반 reading/typing 모드 감지하여 올바른 경로로 라우팅
 - **Step 6-8**: progressStore는 Phase 7(대시보드)로 defer
+
+### Phase 7: 대시보드 및 마이페이지
+- **Step 7-1: 백엔드**
+  - ProgressService.getLatestReadingProgress(): 최근 통독 진도 1건 (typing/latest와 동일 패턴)
+  - ProgressController GET /reading/latest 엔드포인트 추가
+  - ProgressCacheService.incrementTypingRanking(): Redis ZSET ZINCRBY
+  - ProgressService.completeTyping에 랭킹 ZSET 호출 추가
+  - RankingEntryResponse record DTO (rank, userId, name, completedChapters)
+  - RankingService: Redis ZREVRANGE + User 벌크 조회 (findAllById)
+  - RankingController: GET /api/ranking/typing?limit= (기본 10, 최대 50)
+  - SecurityConfig 변경 불필요 (anyRequest().authenticated() 기존 룰 적용)
+- **Step 7-2: 프론트엔드 기반**
+  - types/progress.ts: RankingEntryResponse 타입 추가
+  - utils/api.ts: getLatestReadingProgress + rankingApi.getTypingRanking 추가
+  - stores/progress.ts: Pinia composable store
+    - State: latestTyping, latestReading, allReading, allTyping, topRanking, loading*
+    - Actions: fetchLatest (Promise.allSettled), fetchAll (Promise.all), fetchTopRanking
+    - Computed: readingStats, typingStats (클라이언트 집계)
+- **Step 7-3: 대시보드 페이지**
+  - DashboardPage.vue 플레이스홀더 교체
+  - 최근 필사 카드: bookName+chapter, 진행률 바, "이어서 필사하기" 버튼
+  - 최근 통독 카드: bookName+chapter, 회독수, "이어서 통독하기" 버튼
+  - 필사 랭킹 Top 3: 🥇🥈🥉 + 이름 + 완료 장 수
+  - 빈 상태: "사이드바에서 시작하세요" 안내
+- **Step 7-4: 마이페이지**
+  - MyPagePage.vue 생성 (251 lines)
+  - 탭 바: 통독 현황 / 필사 현황 전환
+  - 3칸 통계 그리드 (진행중 / 완료 / 총 회독수) — readingStats / typingStats
+  - 진행중 섹션: amber 배지, 클릭 시 해당 모드 페이지 이동
+  - 완료 섹션: green 배지 + 회독수 표시
+  - 필사 탭: 진행률 바 포함 (lastTypedVerse/totalVerses)
+- **Step 7-5: 라우터 + 헤더**
+  - router/index.ts: /mypage 라우트 추가 (MainLayout children)
+  - AppHeader.vue: "마이페이지" 링크 추가 (관리자 링크 앞)
+- **커밋 7개**: reading/latest API, 랭킹 ZSET, 랭킹 API, progressStore+타입, 대시보드, 마이페이지, 라우터+헤더
 
 ## 6. Scope Changes
 | # | Type | Description | Impact | Decision |
