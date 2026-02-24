@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-23 23:02:31 |
+| Last Updated | 2026-02-24 21:25:26 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -80,15 +80,15 @@
 | 7-3 | 대시보드 페이지 (최근 진도 카드 + 랭킹 Top 3) | 2026-02-23 22:58:00 | 2026-02-23 22:59:00 | Claude | DashboardPage.vue 교체 |
 | 7-4 | 마이페이지 (통독/필사 탭 + 통계 + 진도 목록) | 2026-02-23 22:59:00 | 2026-02-23 23:00:00 | Claude | MyPagePage.vue 생성 |
 | 7-5 | 라우터 + 헤더 마이페이지 연결 | 2026-02-23 23:00:00 | 2026-02-23 23:02:31 | Claude | /mypage 라우트 + AppHeader 링크 |
-| **Phase 8** | **게시판 기능 (신규)** | - | - | - | 역할 기반 접근 제한 |
-| 8-1 | 게시글 CRUD API | - | - | - | |
-| 8-2 | 게시글 목록 조회 (페이지네이션) | - | - | - | |
-| 8-3 | 게시글 상세 조회 역할 제한 | - | - | - | |
-| 8-4 | 답글 CRUD API | - | - | - | |
-| 8-5 | Vue 게시판 리스트 페이지 | - | - | - | |
-| 8-6 | Vue 게시글 상세 페이지 | - | - | - | |
-| 8-7 | Vue 게시글 작성 페이지 | - | - | - | |
-| 8-8 | Vue 답글 컴포넌트 | - | - | - | |
+| **Phase 8** | **게시판 기능 (신규)** | 2026-02-24 21:05:53 | 2026-02-24 21:25:26 | Claude | 역할 기반 접근 제한 |
+| 8-1 | 백엔드: Repository + DTO | 2026-02-24 21:05:53 | 2026-02-24 21:10:00 | Claude | BoardRepository, ReplyRepository, BoardRequest, BoardListResponse, BoardDetailResponse, ReplyResponse, ReplyRequest |
+| 8-2 | 백엔드: BoardService (CRUD + 역할 제한) | 2026-02-24 21:10:00 | 2026-02-24 21:13:00 | Claude | 8개 메서드, BIBLE_QUESTION 접근 제한 로직 |
+| 8-3 | 백엔드: BoardController (8 REST endpoints) | 2026-02-24 21:13:00 | 2026-02-24 21:15:00 | Claude | POST/GET/PUT/DELETE boards + replies |
+| 8-4 | 프론트: 타입 + API + Store | 2026-02-24 21:15:00 | 2026-02-24 21:18:00 | Claude | types/board.ts, api.ts boardApi, stores/board.ts |
+| 8-5 | 프론트: 게시판 리스트 페이지 | 2026-02-24 21:18:00 | 2026-02-24 21:20:00 | Claude | BoardListPage.vue (카테고리 탭, 목록, 페이지네이션) |
+| 8-6 | 프론트: 게시글 상세 페이지 | 2026-02-24 21:20:00 | 2026-02-24 21:22:00 | Claude | BoardDetailPage.vue (상세+답글+역할분기+403처리) |
+| 8-7 | 프론트: 게시글 작성/수정 페이지 | 2026-02-24 21:22:00 | 2026-02-24 21:24:00 | Claude | BoardWritePage.vue (작성/수정 공용) |
+| 8-8 | 프론트: 라우터 + 헤더 연결 | 2026-02-24 21:24:00 | 2026-02-24 21:25:26 | Claude | 4개 라우트 + AppHeader 게시판 링크 |
 | **Phase 9** | **Gemini 채팅 (제한 기능 포함)** | - | - | - | SSE + 일일 5회 제한 |
 | 9-1 | Gemini Streaming API | - | - | - | |
 | 9-2 | 채팅 세션 CRUD API | - | - | - | |
@@ -167,7 +167,7 @@
 | 5 | `feat/reading-mode` | completed | PR #10 |
 | 6 | `feat/typing-mode` | completed | PR #11 |
 | 7 | `feat/dashboard-mypage` | completed | - |
-| 8 | `feat/board` | - | - |
+| 8 | `feat/board` | completed | PR #13 |
 | 9 | `feat/gemini-chat` | - | - |
 | 10 | `feat/redis-caching` | - | - |
 | 11 | `chore/integration-test` | - | - |
@@ -362,6 +362,36 @@
   - router/index.ts: /mypage 라우트 추가 (MainLayout children)
   - AppHeader.vue: "마이페이지" 링크 추가 (관리자 링크 앞)
 - **커밋 7개**: reading/latest API, 랭킹 ZSET, 랭킹 API, progressStore+타입, 대시보드, 마이페이지, 라우터+헤더
+
+### Phase 8: 게시판 기능
+- **Step 8-1: 백엔드 Repository + DTO**
+  - BoardRepository: findByPostTypeOrderByCreatedAtDesc (페이지네이션+필터), findAllByOrderByCreatedAtDesc
+  - ReplyRepository: findByBoardIdOrderByCreatedAtAsc
+  - DTO 5개: BoardRequest(record), BoardListResponse(from 팩토리), BoardDetailResponse(replies 포함), ReplyResponse(from 팩토리), ReplyRequest
+- **Step 8-2: 백엔드 BoardService**
+  - 8개 메서드: createBoard, getBoards, getBoard, updateBoard, deleteBoard, createReply, updateReply, deleteReply
+  - BIBLE_QUESTION 접근 제한: 상세 조회(작성자+PASTOR/MOKJANG/ADMIN), 답글 작성(PASTOR/MOKJANG/ADMIN만)
+  - 삭제: 작성자 본인 또는 ADMIN, 수정: 작성자 본인만
+  - PRIVILEGED_ROLES Set으로 역할 체크 공통화
+- **Step 8-3: 백엔드 BoardController**
+  - POST /api/boards (201 + Location), GET /api/boards (Page + postType 필터), GET /api/boards/{id} (권한 체크)
+  - PUT /api/boards/{id} (204), DELETE /api/boards/{id} (204)
+  - POST /api/boards/{id}/replies (201), PUT/DELETE replies (204)
+- **Step 8-4: 프론트 타입 + API + Store**
+  - types/board.ts: PostType, BoardListItem, BoardDetail, ReplyItem, BoardRequest, ReplyRequest, PageResponse<T>
+  - api.ts: boardApi 8개 함수 (CRUD + reply CRUD)
+  - stores/board.ts: Pinia composable store, 답글 CUD 후 자동 fetchBoard
+- **Step 8-5: 게시판 리스트 페이지**
+  - BoardListPage.vue: 4개 탭(전체/성경질문/자유/제안), 게시글 목록(배지+제목+작성자+답글수+날짜), 페이지네이션
+- **Step 8-6: 게시글 상세 페이지**
+  - BoardDetailPage.vue: 상세 조회(카테고리 배지, 작성자 역할 표시), 수정/삭제(본인+ADMIN), 답글 CRUD
+  - BIBLE_QUESTION 답글 입력 제한 (PASTOR/MOKJANG/ADMIN만), 403 처리 (잠금 아이콘 + 안내)
+- **Step 8-7: 게시글 작성/수정 페이지**
+  - BoardWritePage.vue: 작성/수정 공용 (route params id 유무로 모드 전환), 카테고리 드롭다운, 제목/내용 입력
+- **Step 8-8: 라우터 + 헤더**
+  - router/index.ts: board-list, board-create, board-detail, board-edit 4개 라우트 (MainLayout children)
+  - AppHeader.vue: "게시판" 링크 추가 (마이페이지와 관리자 사이)
+- **커밋 8개**: Repository+DTO, Service, Controller, 타입+API+Store, 리스트 페이지, 상세 페이지, 작성/수정 페이지, 라우터+헤더
 
 ## 6. Scope Changes
 | # | Type | Description | Impact | Decision |
