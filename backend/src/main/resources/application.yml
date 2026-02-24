@@ -37,6 +37,11 @@ jwt:
   access-expiration: 3600000   # 1시간
   refresh-expiration: 604800000 # 7일
 
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+  daily-limit: 5
+
 server:
   port: 8080
 
