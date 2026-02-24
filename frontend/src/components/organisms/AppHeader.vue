@@ -54,6 +54,13 @@ async function handleLogout() {
     </router-link>
 
     <router-link
+      to="/board"
+      class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+    >
+      게시판
+    </router-link>
+
+    <router-link
       v-if="authStore.isAdmin"
       to="/admin/users"
       class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"

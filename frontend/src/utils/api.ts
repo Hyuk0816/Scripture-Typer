@@ -17,6 +17,13 @@ import type {
   TypingProgressResponse,
   RankingEntryResponse,
 } from '@/types/progress'
+import type {
+  BoardListItem,
+  BoardDetail,
+  BoardRequest,
+  ReplyRequest,
+  PageResponse,
+} from '@/types/board'
 
 // --- Token utilities ---
 
@@ -214,6 +221,37 @@ export const rankingApi = {
   getTypingRanking(limit?: number) {
     const params = limit ? { limit } : undefined
     return api.get<RankingEntryResponse[]>('/ranking/typing', { params })
+  },
+}
+
+// --- Board API ---
+
+export const boardApi = {
+  getBoards(page = 0, size = 10, postType?: string) {
+    const params: Record<string, string | number> = { page, size }
+    if (postType) params.postType = postType
+    return api.get<PageResponse<BoardListItem>>('/boards', { params })
+  },
+  getBoard(id: number) {
+    return api.get<BoardDetail>(`/boards/${id}`)
+  },
+  createBoard(data: BoardRequest) {
+    return api.post<void>('/boards', data)
+  },
+  updateBoard(id: number, data: BoardRequest) {
+    return api.put<void>(`/boards/${id}`, data)
+  },
+  deleteBoard(id: number) {
+    return api.delete<void>(`/boards/${id}`)
+  },
+  createReply(boardId: number, data: ReplyRequest) {
+    return api.post<void>(`/boards/${boardId}/replies`, data)
+  },
+  updateReply(boardId: number, replyId: number, data: ReplyRequest) {
+    return api.put<void>(`/boards/${boardId}/replies/${replyId}`, data)
+  },
+  deleteReply(boardId: number, replyId: number) {
+    return api.delete<void>(`/boards/${boardId}/replies/${replyId}`)
   },
 }
 
