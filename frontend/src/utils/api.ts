@@ -24,6 +24,7 @@ import type {
   ReplyRequest,
   PageResponse,
 } from '@/types/board'
+import type { ChatSession, ChatUsage } from '@/types/chat'
 
 // --- Token utilities ---
 
@@ -252,6 +253,34 @@ export const boardApi = {
   },
   deleteReply(boardId: number, replyId: number) {
     return api.delete<void>(`/boards/${boardId}/replies/${replyId}`)
+  },
+}
+
+// --- Chat API ---
+
+export const chatApi = {
+  getSessions() {
+    return api.get<ChatSession[]>('/chat/sessions')
+  },
+  getMessages(sessionId: number) {
+    return api.get<Array<{ id: number; role: string; content: string; createdAt: string }>>(
+      `/chat/sessions/${sessionId}/messages`,
+    )
+  },
+  createSession(data: { title: string; bookName: string | null; chapter: number | null }) {
+    return api.post<ChatSession>('/chat/sessions', data)
+  },
+  addMessage(sessionId: number, data: { role: string; content: string }) {
+    return api.post<{ id: number; role: string; content: string; createdAt: string }>(
+      `/chat/sessions/${sessionId}/messages`,
+      data,
+    )
+  },
+  deleteSession(sessionId: number) {
+    return api.delete<void>(`/chat/sessions/${sessionId}`)
+  },
+  getUsage() {
+    return api.get<ChatUsage>('/chat/usage')
   },
 }
 
