@@ -37,6 +37,26 @@ const router = createRouter({
           name: 'mypage',
           component: () => import('@/pages/MyPagePage.vue'),
         },
+        {
+          path: 'board',
+          name: 'board-list',
+          component: () => import('@/pages/BoardListPage.vue'),
+        },
+        {
+          path: 'board/create',
+          name: 'board-create',
+          component: () => import('@/pages/BoardWritePage.vue'),
+        },
+        {
+          path: 'board/:id',
+          name: 'board-detail',
+          component: () => import('@/pages/BoardDetailPage.vue'),
+        },
+        {
+          path: 'board/:id/edit',
+          name: 'board-edit',
+          component: () => import('@/pages/BoardWritePage.vue'),
+        },
       ],
     },
     {
