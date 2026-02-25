@@ -1,139 +1,116 @@
 package com.scriptuotyper.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scriptuotyper.domain.chat.GeminiPromptTemplate;
 import com.scriptuotyper.dto.chat.ChatStreamRequest;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.SystemMessage;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel;
+import dev.langchain4j.model.chat.listener.ChatModelListener;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import reactor.core.Disposable;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 public class GeminiService {
 
-    private final String apiKey;
-    private final String model;
-    private final WebClient webClient;
+    private final StreamingChatModel streamingModel;
     private final ObjectMapper objectMapper;
 
     public GeminiService(
             @Value("${gemini.api-key}") String apiKey,
-            @Value("${gemini.model}") String model) {
-        this.apiKey = apiKey;
-        this.model = model;
-        this.webClient = WebClient.builder()
-                .baseUrl("https://generativelanguage.googleapis.com")
-                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(1024 * 1024))
+            @Value("${gemini.model}") String model,
+            LangfuseChatModelListener langfuseListener) {
+        this.streamingModel = GoogleAiGeminiStreamingChatModel.builder()
+                .apiKey(apiKey)
+                .modelName(model)
+                .maxOutputTokens(1024)
+                .temperature(0.7)
+                .listeners(List.of(langfuseListener))
                 .build();
         this.objectMapper = new ObjectMapper();
+        log.info("GeminiService initialized with LangChain4j + LangFuse - model: {}", model);
     }
 
     public SseEmitter streamChat(ChatStreamRequest request) {
         SseEmitter emitter = new SseEmitter(120_000L);
 
-        String systemPrompt = buildSystemPrompt(request.context());
+        List<ChatMessage> messages = buildMessages(request);
 
-        List<Map<String, Object>> contents = new ArrayList<>();
-        for (ChatStreamRequest.MessageItem msg : request.messages()) {
-            String role = "assistant".equals(msg.role()) ? "model" : "user";
-            contents.add(Map.of(
-                    "role", role,
-                    "parts", List.of(Map.of("text", msg.content()))
-            ));
-        }
+        streamingModel.chat(messages, new StreamingChatResponseHandler() {
+            @Override
+            public void onPartialResponse(String partialResponse) {
+                try {
+                    String json = objectMapper.writeValueAsString(Map.of("content", partialResponse));
+                    emitter.send(SseEmitter.event().data(json));
+                } catch (IOException e) {
+                    log.debug("Emitter send failed: {}", e.getMessage());
+                }
+            }
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("contents", contents);
-        body.put("systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt))));
+            @Override
+            public void onCompleteResponse(ChatResponse completeResponse) {
+                try {
+                    emitter.send(SseEmitter.event().data("[DONE]"));
+                    emitter.complete();
+                } catch (IOException e) {
+                    log.debug("Emitter already completed");
+                }
+            }
 
-        String url = "/v1beta/models/" + model + ":streamGenerateContent?alt=sse";
-
-        Disposable subscription = webClient.post()
-                .uri(url)
-                .header("x-goog-api-key", apiKey)
-                .header("Content-Type", "application/json")
-                .bodyValue(body)
-                .retrieve()
-                .bodyToFlux(DataBuffer.class)
-                .doOnNext(dataBuffer -> {
-                    String chunk = dataBuffer.toString(StandardCharsets.UTF_8);
-                    DataBufferUtils.release(dataBuffer);
-                    processChunk(chunk, emitter);
-                })
-                .doOnComplete(() -> {
-                    try {
-                        emitter.send(SseEmitter.event().data("[DONE]"));
-                        emitter.complete();
-                    } catch (IOException e) {
-                        log.debug("Emitter already completed on done");
-                    }
-                })
-                .doOnError(error -> {
-                    log.error("Gemini API error: {}", error.getMessage());
-                    try {
-                        String errorJson = objectMapper.writeValueAsString(
-                                Map.of("error", "Gemini API 연결 실패: " + error.getMessage())
-                        );
-                        emitter.send(SseEmitter.event().data(errorJson));
-                        emitter.send(SseEmitter.event().data("[DONE]"));
-                        emitter.complete();
-                    } catch (IOException e) {
-                        emitter.completeWithError(error);
-                    }
-                })
-                .subscribe();
-
-        emitter.onCompletion(subscription::dispose);
-        emitter.onTimeout(() -> {
-            subscription.dispose();
-            emitter.complete();
+            @Override
+            public void onError(Throwable error) {
+                log.error("Gemini streaming error: {}", error.getMessage());
+                try {
+                    String errorJson = objectMapper.writeValueAsString(
+                            Map.of("error", "Gemini API 오류: " + error.getMessage())
+                    );
+                    emitter.send(SseEmitter.event().data(errorJson));
+                    emitter.send(SseEmitter.event().data("[DONE]"));
+                    emitter.complete();
+                } catch (IOException e) {
+                    emitter.completeWithError(error);
+                }
+            }
         });
 
         return emitter;
     }
 
-    private void processChunk(String chunk, SseEmitter emitter) {
-        String[] lines = chunk.split("\n");
-        for (String line : lines) {
-            if (!line.startsWith("data: ")) continue;
-            String data = line.substring(6).trim();
-            if (data.isEmpty()) continue;
+    private List<ChatMessage> buildMessages(ChatStreamRequest request) {
+        List<ChatMessage> messages = new ArrayList<>();
 
-            try {
-                JsonNode parsed = objectMapper.readTree(data);
-                JsonNode textNode = parsed.path("candidates")
-                        .path(0)
-                        .path("content")
-                        .path("parts")
-                        .path(0)
-                        .path("text");
+        // System prompt
+        String systemPrompt = buildSystemPrompt(request.context());
+        messages.add(SystemMessage.from(systemPrompt));
 
-                if (!textNode.isMissingNode() && !textNode.asText().isEmpty()) {
-                    String contentJson = objectMapper.writeValueAsString(
-                            Map.of("content", textNode.asText())
-                    );
-                    emitter.send(SseEmitter.event().data(contentJson));
-                }
-            } catch (Exception e) {
-                log.debug("Skipping malformed SSE line: {}", line);
+        // Conversation history
+        for (ChatStreamRequest.MessageItem msg : request.messages()) {
+            if ("user".equals(msg.role())) {
+                messages.add(UserMessage.from(msg.content()));
+            } else if ("assistant".equals(msg.role())) {
+                messages.add(AiMessage.from(msg.content()));
             }
         }
+
+        return messages;
     }
 
     private String buildSystemPrompt(ChatStreamRequest.ChatContext context) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append("당신은 성경 말씀 도우미입니다. 사용자가 성경 구절에 대해 질문하면 ")
-                .append("해석, 묵상 포인트, 역사적 배경, 적용 등을 친절하고 간결하게 답변해주세요. ")
-                .append("한국어로 답변하세요.");
+        prompt.append(GeminiPromptTemplate.SYSTEM_PROMPT.getSystemPrompt());
 
         if (context != null && context.bookName() != null) {
             prompt.append("\n\n현재 사용자가 타이핑 중인 구절: ").append(context.bookName());
