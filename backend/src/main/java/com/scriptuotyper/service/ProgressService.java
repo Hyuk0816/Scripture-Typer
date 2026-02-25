@@ -29,14 +29,19 @@ public class ProgressService {
     private final BibleRepository bibleRepository;
 
     /**
-     * 통독 진도 저장 (Redis만 - 빠른 응답)
+     * 통독 진도 저장 (Redis만 - 빠른 응답, Redis 장애 시 DB fallback)
      */
     public void saveReadingProgress(Long userId, String bookName, int chapter, int lastReadVerse) {
-        progressCacheService.saveLastVerse(userId, ProgressMode.READING.name(), bookName, chapter, lastReadVerse);
+        try {
+            progressCacheService.saveLastVerse(userId, ProgressMode.READING.name(), bookName, chapter, lastReadVerse);
+        } catch (Exception e) {
+            log.warn("Redis 쓰기 실패, DB fallback: {}", e.getMessage());
+            saveProgressToDb(userId, ProgressMode.READING, bookName, chapter, lastReadVerse);
+        }
     }
 
     /**
-     * 통독 완료 (readCount 증가 + 즉시 DB 동기화)
+     * 통독 완료 (readCount 증가 + 즉시 DB 동기화 + Redis 키 삭제)
      */
     @Transactional
     public void completeReading(Long userId, String bookName, int chapter) {
@@ -57,17 +62,25 @@ public class ProgressService {
         progress.incrementReadCount();
 
         // Redis에서 최신 lastVerse 가져와서 DB에도 반영
-        Map<Object, Object> cached = progressCacheService.getProgress(
-                userId, ProgressMode.READING.name(), bookName, chapter);
-        if (!cached.isEmpty() && cached.containsKey("lastVerse")) {
-            progress.updateLastTypedVerse(Integer.parseInt((String) cached.get("lastVerse")));
+        try {
+            Map<Object, Object> cached = progressCacheService.getProgress(
+                    userId, ProgressMode.READING.name(), bookName, chapter);
+            if (!cached.isEmpty() && cached.containsKey("lastVerse")) {
+                progress.updateLastTypedVerse(Integer.parseInt((String) cached.get("lastVerse")));
+            }
+        } catch (Exception e) {
+            log.warn("Redis 읽기 실패 (complete): {}", e.getMessage());
         }
 
         progressRepository.save(progress);
 
-        // Redis 캐시도 DB와 동기화
-        String key = progressCacheService.buildKey(userId, ProgressMode.READING.name(), bookName, chapter);
-        progressCacheService.setProgress(key, progress.getLastTypedVerse(), progress.getReadCount());
+        // 완료된 장은 DB에 저장됐으므로 Redis 키 삭제
+        try {
+            String key = progressCacheService.buildKey(userId, ProgressMode.READING.name(), bookName, chapter);
+            progressCacheService.deleteProgressKey(key);
+        } catch (Exception e) {
+            log.warn("Redis 키 삭제 실패: {}", e.getMessage());
+        }
     }
 
     /**
@@ -76,23 +89,31 @@ public class ProgressService {
     @Transactional(readOnly = true)
     public ReadingProgressResponse getReadingProgress(Long userId, String bookName, int chapter) {
         // 1. Redis 캐시 조회
-        Map<Object, Object> cached = progressCacheService.getProgress(
-                userId, ProgressMode.READING.name(), bookName, chapter);
-        if (!cached.isEmpty()) {
-            int lastVerse = cached.containsKey("lastVerse")
-                    ? Integer.parseInt((String) cached.get("lastVerse")) : 0;
-            int readCount = cached.containsKey("readCount")
-                    ? Integer.parseInt((String) cached.get("readCount")) : 0;
-            return new ReadingProgressResponse(bookName, chapter, lastVerse, readCount);
+        try {
+            Map<Object, Object> cached = progressCacheService.getProgress(
+                    userId, ProgressMode.READING.name(), bookName, chapter);
+            if (!cached.isEmpty()) {
+                int lastVerse = cached.containsKey("lastVerse")
+                        ? Integer.parseInt((String) cached.get("lastVerse")) : 0;
+                int readCount = cached.containsKey("readCount")
+                        ? Integer.parseInt((String) cached.get("readCount")) : 0;
+                return new ReadingProgressResponse(bookName, chapter, lastVerse, readCount);
+            }
+        } catch (Exception e) {
+            log.warn("Redis 조회 실패, DB fallback: {}", e.getMessage());
         }
 
         // 2. DB 조회 + Redis 캐시 적재
         return progressRepository.findByUserIdAndModeAndBookNameAndChapter(
                 userId, ProgressMode.READING, bookName, chapter
         ).map(progress -> {
-            String key = progressCacheService.buildKey(
-                    userId, ProgressMode.READING.name(), bookName, chapter);
-            progressCacheService.setProgress(key, progress.getLastTypedVerse(), progress.getReadCount());
+            try {
+                String key = progressCacheService.buildKey(
+                        userId, ProgressMode.READING.name(), bookName, chapter);
+                progressCacheService.setProgress(key, progress.getLastTypedVerse(), progress.getReadCount());
+            } catch (Exception e) {
+                log.warn("Redis 캐시 적재 실패: {}", e.getMessage());
+            }
             return ReadingProgressResponse.from(progress);
         }).orElse(new ReadingProgressResponse(bookName, chapter, 0, 0));
     }
@@ -129,20 +150,24 @@ public class ProgressService {
         }
 
         // Redis 데이터로 덮어쓰기 (더 최신)
-        Map<String, Map<Object, Object>> redisData =
-                progressCacheService.findAllUserProgress(userId, ProgressMode.READING.name());
-        for (Map.Entry<String, Map<Object, Object>> entry : redisData.entrySet()) {
-            String[] parsed = ProgressCacheService.parseKey(entry.getKey());
-            if (parsed == null) continue;
-            String bookName = parsed[0];
-            int chapter = Integer.parseInt(parsed[1]);
-            Map<Object, Object> data = entry.getValue();
-            int lastVerse = data.containsKey("lastVerse")
-                    ? Integer.parseInt((String) data.get("lastVerse")) : 0;
-            int readCount = data.containsKey("readCount")
-                    ? Integer.parseInt((String) data.get("readCount")) : 0;
-            merged.put(bookName + ":" + chapter,
-                    new ReadingProgressResponse(bookName, chapter, lastVerse, readCount));
+        try {
+            Map<String, Map<Object, Object>> redisData =
+                    progressCacheService.findAllUserProgress(userId, ProgressMode.READING.name());
+            for (Map.Entry<String, Map<Object, Object>> entry : redisData.entrySet()) {
+                String[] parsed = ProgressCacheService.parseKey(entry.getKey());
+                if (parsed == null) continue;
+                String bookName = parsed[0];
+                int chapter = Integer.parseInt(parsed[1]);
+                Map<Object, Object> data = entry.getValue();
+                int lastVerse = data.containsKey("lastVerse")
+                        ? Integer.parseInt((String) data.get("lastVerse")) : 0;
+                int readCount = data.containsKey("readCount")
+                        ? Integer.parseInt((String) data.get("readCount")) : 0;
+                merged.put(bookName + ":" + chapter,
+                        new ReadingProgressResponse(bookName, chapter, lastVerse, readCount));
+            }
+        } catch (Exception e) {
+            log.warn("Redis 전체 조회 실패, DB 데이터만 반환: {}", e.getMessage());
         }
 
         return new ArrayList<>(merged.values());
@@ -151,14 +176,19 @@ public class ProgressService {
     // ===== Typing Progress =====
 
     /**
-     * 필사 진도 저장 (Redis만 - 빠른 응답)
+     * 필사 진도 저장 (Redis만 - 빠른 응답, Redis 장애 시 DB fallback)
      */
     public void saveTypingProgress(Long userId, String bookName, int chapter, int lastTypedVerse) {
-        progressCacheService.saveLastVerse(userId, ProgressMode.TYPING.name(), bookName, chapter, lastTypedVerse);
+        try {
+            progressCacheService.saveLastVerse(userId, ProgressMode.TYPING.name(), bookName, chapter, lastTypedVerse);
+        } catch (Exception e) {
+            log.warn("Redis 쓰기 실패, DB fallback: {}", e.getMessage());
+            saveProgressToDb(userId, ProgressMode.TYPING, bookName, chapter, lastTypedVerse);
+        }
     }
 
     /**
-     * 필사 완료 (readCount 증가 + 즉시 DB 동기화)
+     * 필사 완료 (readCount 증가 + 즉시 DB 동기화 + Redis 키 삭제)
      */
     @Transactional
     public void completeTyping(Long userId, String bookName, int chapter) {
@@ -178,19 +208,32 @@ public class ProgressService {
 
         progress.incrementReadCount();
 
-        Map<Object, Object> cached = progressCacheService.getProgress(
-                userId, ProgressMode.TYPING.name(), bookName, chapter);
-        if (!cached.isEmpty() && cached.containsKey("lastVerse")) {
-            progress.updateLastTypedVerse(Integer.parseInt((String) cached.get("lastVerse")));
+        try {
+            Map<Object, Object> cached = progressCacheService.getProgress(
+                    userId, ProgressMode.TYPING.name(), bookName, chapter);
+            if (!cached.isEmpty() && cached.containsKey("lastVerse")) {
+                progress.updateLastTypedVerse(Integer.parseInt((String) cached.get("lastVerse")));
+            }
+        } catch (Exception e) {
+            log.warn("Redis 읽기 실패 (complete): {}", e.getMessage());
         }
 
         progressRepository.save(progress);
 
         // 랭킹 ZSET 업데이트
-        progressCacheService.incrementTypingRanking(userId);
+        try {
+            progressCacheService.incrementTypingRanking(userId);
+        } catch (Exception e) {
+            log.warn("Redis 랭킹 업데이트 실패: {}", e.getMessage());
+        }
 
-        String key = progressCacheService.buildKey(userId, ProgressMode.TYPING.name(), bookName, chapter);
-        progressCacheService.setProgress(key, progress.getLastTypedVerse(), progress.getReadCount());
+        // 완료된 장은 DB에 저장됐으므로 Redis 키 삭제
+        try {
+            String key = progressCacheService.buildKey(userId, ProgressMode.TYPING.name(), bookName, chapter);
+            progressCacheService.deleteProgressKey(key);
+        } catch (Exception e) {
+            log.warn("Redis 키 삭제 실패: {}", e.getMessage());
+        }
     }
 
     /**
@@ -200,22 +243,30 @@ public class ProgressService {
     public TypingProgressResponse getTypingProgress(Long userId, String bookName, int chapter) {
         int totalVerses = bibleRepository.countByBookNameAndChapter(bookName, chapter);
 
-        Map<Object, Object> cached = progressCacheService.getProgress(
-                userId, ProgressMode.TYPING.name(), bookName, chapter);
-        if (!cached.isEmpty()) {
-            int lastVerse = cached.containsKey("lastVerse")
-                    ? Integer.parseInt((String) cached.get("lastVerse")) : 0;
-            int readCount = cached.containsKey("readCount")
-                    ? Integer.parseInt((String) cached.get("readCount")) : 0;
-            return new TypingProgressResponse(bookName, chapter, lastVerse, readCount, totalVerses);
+        try {
+            Map<Object, Object> cached = progressCacheService.getProgress(
+                    userId, ProgressMode.TYPING.name(), bookName, chapter);
+            if (!cached.isEmpty()) {
+                int lastVerse = cached.containsKey("lastVerse")
+                        ? Integer.parseInt((String) cached.get("lastVerse")) : 0;
+                int readCount = cached.containsKey("readCount")
+                        ? Integer.parseInt((String) cached.get("readCount")) : 0;
+                return new TypingProgressResponse(bookName, chapter, lastVerse, readCount, totalVerses);
+            }
+        } catch (Exception e) {
+            log.warn("Redis 조회 실패, DB fallback: {}", e.getMessage());
         }
 
         return progressRepository.findByUserIdAndModeAndBookNameAndChapter(
                 userId, ProgressMode.TYPING, bookName, chapter
         ).map(progress -> {
-            String key = progressCacheService.buildKey(
-                    userId, ProgressMode.TYPING.name(), bookName, chapter);
-            progressCacheService.setProgress(key, progress.getLastTypedVerse(), progress.getReadCount());
+            try {
+                String key = progressCacheService.buildKey(
+                        userId, ProgressMode.TYPING.name(), bookName, chapter);
+                progressCacheService.setProgress(key, progress.getLastTypedVerse(), progress.getReadCount());
+            } catch (Exception e) {
+                log.warn("Redis 캐시 적재 실패: {}", e.getMessage());
+            }
             return TypingProgressResponse.from(progress, totalVerses);
         }).orElse(new TypingProgressResponse(bookName, chapter, 0, 0, totalVerses));
     }
@@ -255,21 +306,25 @@ public class ProgressService {
         }
 
         // Redis 데이터로 덮어쓰기 (더 최신)
-        Map<String, Map<Object, Object>> redisData =
-                progressCacheService.findAllUserProgress(userId, ProgressMode.TYPING.name());
-        for (Map.Entry<String, Map<Object, Object>> entry : redisData.entrySet()) {
-            String[] parsed = ProgressCacheService.parseKey(entry.getKey());
-            if (parsed == null) continue;
-            String bookName = parsed[0];
-            int chapter = Integer.parseInt(parsed[1]);
-            Map<Object, Object> data = entry.getValue();
-            int lastVerse = data.containsKey("lastVerse")
-                    ? Integer.parseInt((String) data.get("lastVerse")) : 0;
-            int readCount = data.containsKey("readCount")
-                    ? Integer.parseInt((String) data.get("readCount")) : 0;
-            int totalVerses = bibleRepository.countByBookNameAndChapter(bookName, chapter);
-            merged.put(bookName + ":" + chapter,
-                    new TypingProgressResponse(bookName, chapter, lastVerse, readCount, totalVerses));
+        try {
+            Map<String, Map<Object, Object>> redisData =
+                    progressCacheService.findAllUserProgress(userId, ProgressMode.TYPING.name());
+            for (Map.Entry<String, Map<Object, Object>> entry : redisData.entrySet()) {
+                String[] parsed = ProgressCacheService.parseKey(entry.getKey());
+                if (parsed == null) continue;
+                String bookName = parsed[0];
+                int chapter = Integer.parseInt(parsed[1]);
+                Map<Object, Object> data = entry.getValue();
+                int lastVerse = data.containsKey("lastVerse")
+                        ? Integer.parseInt((String) data.get("lastVerse")) : 0;
+                int readCount = data.containsKey("readCount")
+                        ? Integer.parseInt((String) data.get("readCount")) : 0;
+                int totalVerses = bibleRepository.countByBookNameAndChapter(bookName, chapter);
+                merged.put(bookName + ":" + chapter,
+                        new TypingProgressResponse(bookName, chapter, lastVerse, readCount, totalVerses));
+            }
+        } catch (Exception e) {
+            log.warn("Redis 전체 조회 실패, DB 데이터만 반환: {}", e.getMessage());
         }
 
         return new ArrayList<>(merged.values());
@@ -281,47 +336,57 @@ public class ProgressService {
      * Redis latest 키로 가장 최근 통독 진도 조회 (O(1))
      */
     private ReadingProgressResponse findLatestReadingFromRedis(Long userId) {
-        String latest = progressCacheService.getLatestKey(userId, ProgressMode.READING.name());
-        if (latest == null) return null;
+        try {
+            String latest = progressCacheService.getLatestKey(userId, ProgressMode.READING.name());
+            if (latest == null) return null;
 
-        String[] parts = latest.split(":", 2);
-        if (parts.length < 2) return null;
+            String[] parts = latest.split(":", 2);
+            if (parts.length < 2) return null;
 
-        String bookName = parts[0];
-        int chapter = Integer.parseInt(parts[1]);
-        Map<Object, Object> data = progressCacheService.getProgress(
-                userId, ProgressMode.READING.name(), bookName, chapter);
-        if (data.isEmpty()) return null;
+            String bookName = parts[0];
+            int chapter = Integer.parseInt(parts[1]);
+            Map<Object, Object> data = progressCacheService.getProgress(
+                    userId, ProgressMode.READING.name(), bookName, chapter);
+            if (data.isEmpty()) return null;
 
-        int lastVerse = data.containsKey("lastVerse")
-                ? Integer.parseInt((String) data.get("lastVerse")) : 0;
-        int readCount = data.containsKey("readCount")
-                ? Integer.parseInt((String) data.get("readCount")) : 0;
-        return new ReadingProgressResponse(bookName, chapter, lastVerse, readCount);
+            int lastVerse = data.containsKey("lastVerse")
+                    ? Integer.parseInt((String) data.get("lastVerse")) : 0;
+            int readCount = data.containsKey("readCount")
+                    ? Integer.parseInt((String) data.get("readCount")) : 0;
+            return new ReadingProgressResponse(bookName, chapter, lastVerse, readCount);
+        } catch (Exception e) {
+            log.warn("Redis latest 조회 실패: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
      * Redis latest 키로 가장 최근 필사 진도 조회 (O(1))
      */
     private TypingProgressResponse findLatestTypingFromRedis(Long userId) {
-        String latest = progressCacheService.getLatestKey(userId, ProgressMode.TYPING.name());
-        if (latest == null) return null;
+        try {
+            String latest = progressCacheService.getLatestKey(userId, ProgressMode.TYPING.name());
+            if (latest == null) return null;
 
-        String[] parts = latest.split(":", 2);
-        if (parts.length < 2) return null;
+            String[] parts = latest.split(":", 2);
+            if (parts.length < 2) return null;
 
-        String bookName = parts[0];
-        int chapter = Integer.parseInt(parts[1]);
-        Map<Object, Object> data = progressCacheService.getProgress(
-                userId, ProgressMode.TYPING.name(), bookName, chapter);
-        if (data.isEmpty()) return null;
+            String bookName = parts[0];
+            int chapter = Integer.parseInt(parts[1]);
+            Map<Object, Object> data = progressCacheService.getProgress(
+                    userId, ProgressMode.TYPING.name(), bookName, chapter);
+            if (data.isEmpty()) return null;
 
-        int lastVerse = data.containsKey("lastVerse")
-                ? Integer.parseInt((String) data.get("lastVerse")) : 0;
-        int readCount = data.containsKey("readCount")
-                ? Integer.parseInt((String) data.get("readCount")) : 0;
-        int totalVerses = bibleRepository.countByBookNameAndChapter(bookName, chapter);
-        return new TypingProgressResponse(bookName, chapter, lastVerse, readCount, totalVerses);
+            int lastVerse = data.containsKey("lastVerse")
+                    ? Integer.parseInt((String) data.get("lastVerse")) : 0;
+            int readCount = data.containsKey("readCount")
+                    ? Integer.parseInt((String) data.get("readCount")) : 0;
+            int totalVerses = bibleRepository.countByBookNameAndChapter(bookName, chapter);
+            return new TypingProgressResponse(bookName, chapter, lastVerse, readCount, totalVerses);
+        } catch (Exception e) {
+            log.warn("Redis latest 조회 실패: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -371,6 +436,29 @@ public class ProgressService {
             progress.incrementReadCount();
         }
 
+        progressRepository.save(progress);
+    }
+
+    /**
+     * Redis 장애 시 DB에 직접 저장 (fallback)
+     */
+    @Transactional
+    void saveProgressToDb(Long userId, ProgressMode mode, String bookName, int chapter, int lastVerse) {
+        UserProgress progress = progressRepository.findByUserIdAndModeAndBookNameAndChapter(
+                userId, mode, bookName, chapter
+        ).orElseGet(() -> {
+            var user = userRepository.findById(userId)
+                    .orElseThrow(UserNotFoundException::new);
+            return UserProgress.builder()
+                    .user(user)
+                    .mode(mode)
+                    .bookName(bookName)
+                    .chapter(chapter)
+                    .lastTypedVerse(0)
+                    .build();
+        });
+
+        progress.updateLastTypedVerse(lastVerse);
         progressRepository.save(progress);
     }
 }

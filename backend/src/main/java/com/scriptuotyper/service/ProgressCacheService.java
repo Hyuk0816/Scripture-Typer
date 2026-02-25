@@ -1,10 +1,15 @@
 package com.scriptuotyper.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,6 +18,7 @@ import java.util.Set;
  * Key: progress:{userId}:{mode}:{bookName}:{chapter}
  * Fields: lastVerse, readCount, updatedAt
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProgressCacheService {
@@ -20,8 +26,10 @@ public class ProgressCacheService {
     private static final String KEY_PREFIX = "progress:";
     private static final String DIRTY_SET = "progress:dirty";
     private static final String SYNCING_SET = "progress:syncing";
+    private static final String FAILED_SET = "progress:failed";
     private static final String LATEST_PREFIX = "progress:latest:";
     private static final String RANKING_TYPING_KEY = "ranking:typing";
+    private static final Duration KEY_TTL = Duration.ofDays(3);
 
     private final StringRedisTemplate redisTemplate;
 
@@ -33,6 +41,7 @@ public class ProgressCacheService {
         String key = buildKey(userId, mode, bookName, chapter);
         redisTemplate.opsForHash().put(key, "lastVerse", String.valueOf(lastVerse));
         redisTemplate.opsForHash().put(key, "updatedAt", String.valueOf(System.currentTimeMillis() / 1000));
+        redisTemplate.expire(key, KEY_TTL);
         markDirty(key);
         // 최근 진도 키 업데이트
         redisTemplate.opsForValue().set(LATEST_PREFIX + userId + ":" + mode, bookName + ":" + chapter);
@@ -42,12 +51,17 @@ public class ProgressCacheService {
         String key = buildKey(userId, mode, bookName, chapter);
         redisTemplate.opsForHash().increment(key, "readCount", 1);
         redisTemplate.opsForHash().put(key, "updatedAt", String.valueOf(System.currentTimeMillis() / 1000));
+        redisTemplate.expire(key, KEY_TTL);
         markDirty(key);
     }
 
     public Map<Object, Object> getProgress(Long userId, String mode, String bookName, int chapter) {
         String key = buildKey(userId, mode, bookName, chapter);
-        return redisTemplate.opsForHash().entries(key);
+        Map<Object, Object> data = redisTemplate.opsForHash().entries(key);
+        if (!data.isEmpty()) {
+            redisTemplate.expire(key, KEY_TTL);
+        }
+        return data;
     }
 
     public Map<Object, Object> getProgressByKey(String key) {
@@ -58,6 +72,14 @@ public class ProgressCacheService {
         redisTemplate.opsForHash().put(key, "lastVerse", String.valueOf(lastVerse));
         redisTemplate.opsForHash().put(key, "readCount", String.valueOf(readCount));
         redisTemplate.opsForHash().put(key, "updatedAt", String.valueOf(System.currentTimeMillis() / 1000));
+        redisTemplate.expire(key, KEY_TTL);
+    }
+
+    /**
+     * 완료된 진도 키 삭제 (DB에 이미 저장된 경우).
+     */
+    public void deleteProgressKey(String key) {
+        redisTemplate.delete(key);
     }
 
     /**
@@ -78,7 +100,8 @@ public class ProgressCacheService {
             return Set.of();
         }
         redisTemplate.rename(DIRTY_SET, SYNCING_SET);
-        return redisTemplate.opsForSet().members(SYNCING_SET);
+        Set<String> members = redisTemplate.opsForSet().members(SYNCING_SET);
+        return members != null ? members : Set.of();
     }
 
     /**
@@ -86,6 +109,26 @@ public class ProgressCacheService {
      */
     public void clearSyncingSet() {
         redisTemplate.delete(SYNCING_SET);
+    }
+
+    /**
+     * 실패 키를 failed set에 등록 (다음 스케줄에서 재시도)
+     */
+    public void markFailed(String key) {
+        redisTemplate.opsForSet().add(FAILED_SET, key);
+    }
+
+    /**
+     * failed set의 키를 가져오고 비움 (재시도 대상)
+     * @return 재시도 대상 키 목록
+     */
+    public Set<String> popFailedKeys() {
+        Set<String> members = redisTemplate.opsForSet().members(FAILED_SET);
+        if (members != null && !members.isEmpty()) {
+            redisTemplate.delete(FAILED_SET);
+            return members;
+        }
+        return Set.of();
     }
 
     /**
@@ -105,13 +148,13 @@ public class ProgressCacheService {
 
     /**
      * 특정 유저의 특정 모드 진도 키를 모두 조회.
-     * 키 패턴: progress:{userId}:{mode}:*
+     * SCAN 사용 (keys() 대신 비블로킹).
      * @return key → {lastVerse, readCount, updatedAt} 맵
      */
     public Map<String, Map<Object, Object>> findAllUserProgress(Long userId, String mode) {
         String pattern = KEY_PREFIX + userId + ":" + mode + ":*";
-        Set<String> keys = redisTemplate.keys(pattern);
-        if (keys == null || keys.isEmpty()) {
+        Set<String> keys = scanKeys(pattern);
+        if (keys.isEmpty()) {
             return Map.of();
         }
 
@@ -123,6 +166,20 @@ public class ProgressCacheService {
             }
         }
         return result;
+    }
+
+    /**
+     * SCAN 명령으로 패턴 매칭 키 조회 (keys() 대신 비블로킹).
+     */
+    private Set<String> scanKeys(String pattern) {
+        Set<String> keys = new HashSet<>();
+        ScanOptions options = ScanOptions.scanOptions().match(pattern).count(100).build();
+        try (Cursor<String> cursor = redisTemplate.scan(options)) {
+            while (cursor.hasNext()) {
+                keys.add(cursor.next());
+            }
+        }
+        return keys;
     }
 
     /**
