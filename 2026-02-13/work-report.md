@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-25 23:00:49 |
+| Last Updated | 2026-02-25 23:41:14 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -105,14 +105,12 @@
 | 9-B-2 | LangfuseTraceService 생성 (REST API 클라이언트) | 2026-02-25 22:55:00 | 2026-02-25 22:58:00 | Claude | HttpClient 비동기 POST /api/public/ingestion, Basic Auth, trace+generation batch |
 | 9-B-3 | LangfuseChatModelListener 생성 (ChatModelListener 구현) | 2026-02-25 22:58:00 | 2026-02-25 23:00:00 | Claude | onRequest→traceId 기록, onResponse→LangFuse 전송, onError→에러 트레이스 |
 | 9-B-4 | GeminiService에 LangFuse 리스너 등록 | 2026-02-25 23:00:00 | 2026-02-25 23:00:49 | Claude | .listeners(List.of(langfuseListener)) + application-test.yml 갱신 |
-| **Phase 10** | **Redis 캐싱 전략** | - | - | - | 진도 추적 최적화 |
-| 10-1 | Redis 설정 및 RedisTemplate 구성 | - | - | - | |
-| 10-2 | 진도 캐시 키 전략 설계 | - | - | - | |
-| 10-3 | 캐시 읽기 로직 (Read-Through) | - | - | - | |
-| 10-4 | 캐시 쓰기 로직 (Write-Behind) | - | - | - | |
-| 10-5 | 스케줄러: Redis → DB 동기화 | - | - | - | |
-| 10-6 | 캐시 무효화 전략 | - | - | - | |
-| 10-7 | 장애 대응: Redis 다운 시 fallback | - | - | - | |
+| **Phase 10** | **Redis 캐싱 고도화** | 2026-02-25 23:34:51 | 2026-02-25 23:41:14 | Claude | 기존 Phase 5 보완 |
+| 10-1 | RedisConfig + 커넥션 풀/타임아웃 설정 | 2026-02-25 23:34:51 | 2026-02-25 23:36:00 | Claude | Lettuce pool (max-active:16, max-idle:8, min-idle:2), timeout:2s |
+| 10-2 | complete 후 Redis 키 삭제 + TTL 3일 | 2026-02-25 23:36:00 | 2026-02-25 23:38:00 | Claude | deleteProgressKey(), 쓰기/읽기마다 EXPIRE 3일 갱신 |
+| 10-3 | keys() → SCAN 교체 | 2026-02-25 23:36:00 | 2026-02-25 23:38:00 | Claude | findAllUserProgress()에서 scanKeys() 비블로킹 조회 |
+| 10-4 | Redis 장애 fallback | 2026-02-25 23:38:00 | 2026-02-25 23:40:00 | Claude | save/get 전 try-catch, 실패 시 DB 직접 쓰기/읽기 |
+| 10-5 | 실패 키 재시도 (progress:failed set) | 2026-02-25 23:40:00 | 2026-02-25 23:41:14 | Claude | 스케줄러에서 failed set 먼저 재시도 → 재실패 시 다시 등록 |
 | **Phase 11** | **통합 및 마무리** | - | - | - | E2E 검증 |
 | 11-1 | 전체 Docker Compose 테스트 | - | - | - | |
 | 11-2 | 데이터 마이그레이션 스크립트 | - | - | - | |
@@ -140,6 +138,8 @@
 
 | 15 | WebClient+SseEmitter → LangChain4j StreamingChatModel 전환 | (A) WebClient 직접 호출 유지+버퍼링 수정 (B) Spring AI (C) LangChain4j | WebClient DataBuffer 청크 분할로 SSE 스트림 끊김 반복 발생. LangChain4j가 Gemini SDK 내장, 스트리밍 콜백 안정적, LangSmith 연동 기반 제공. spring-boot-starter-webflux 의존성 제거 |
 | 16 | LLM Observability로 LangFuse Cloud 선택 | (A) LangSmith (B) LangFuse (C) 자체 로깅 | LangSmith는 LangChain4j에 네이티브 자동 연동 없음 (Python LangChain만 지원). LangFuse 무료 50K obs/월 vs LangSmith 5K traces/월. REST API + ChatModelListener 조합으로 수동 연동 용이 |
+| 17 | complete 후 Redis 진도 키 삭제 | (A) 키 유지 (캐시 역할) (B) 키 삭제 (DB에 이미 저장) | 완료된 장은 DB에 저장 완료. Redis에 유지하면 비활성 키 영구 잔류. 삭제 후 재조회 시 Read-Through로 DB에서 복구 |
+| 18 | keys() → SCAN 교체 | (A) keys() 유지 (B) SCAN cursor 사용 | keys()는 Redis 단일 스레드를 블로킹하여 대규모 데이터 시 장애 유발. SCAN은 비블로킹 cursor 기반 |
 
 ### Decision #4 상세: User 엔티티 & 가입 DTO 정의
 
@@ -473,6 +473,28 @@
   - 생성자에 `LangfuseChatModelListener` 주입
   - `GoogleAiGeminiStreamingChatModel.builder().listeners(List.of(langfuseListener))`
   - 모든 Gemini 호출이 자동으로 LangFuse에 trace 전송
+
+### Phase 10: Redis 캐싱 고도화
+- **Step 10-1: RedisConfig**
+  - RedisConfig.java 생성, StringRedisTemplate 명시적 빈 등록
+  - application.yml: Lettuce pool (max-active:16, max-idle:8, min-idle:2), timeout:2s
+- **Step 10-2: complete 후 키 삭제 + TTL 3일**
+  - `completeReading/Typing()`: DB 저장 후 `deleteProgressKey()` 호출 → Redis 키 삭제
+  - 모든 쓰기/읽기에 `redisTemplate.expire(key, Duration.ofDays(3))` 추가
+  - 3일 미접근 키 자동 만료 → Read-Through로 DB에서 복구
+- **Step 10-3: keys() → SCAN 교체**
+  - `findAllUserProgress()`: `keys(pattern)` → `scanKeys(pattern)` (Cursor 기반)
+  - `ScanOptions.scanOptions().match(pattern).count(100).build()` 비블로킹
+- **Step 10-4: Redis 장애 fallback**
+  - `saveReadingProgress/saveTypingProgress`: Redis 실패 시 `saveProgressToDb()` DB 직접 쓰기
+  - `getReadingProgress/getTypingProgress`: Redis 실패 시 DB fallback
+  - `completeReading/Typing`: Redis 읽기/삭제 실패해도 DB 저장은 정상 진행
+  - `getAllReadingProgress/getAllTypingProgress`: Redis 실패 시 DB 데이터만 반환
+  - `findLatestFromRedis()`: Redis 실패 시 null 반환 → DB 결과 사용
+- **Step 10-5: 실패 키 재시도**
+  - `progress:failed` set 추가: sync 실패 키를 markFailed()로 등록
+  - 스케줄러: dirty sync 전에 failed set 먼저 재시도
+  - 재실패 시 다시 failed set에 등록 (다음 3시간 후 재시도)
 
 - **관련 버그 수정 이력** (Phase 9-A 도입 배경):
   - SecurityConfig: `DispatcherType.ASYNC.permitAll()` 추가 (SseEmitter async dispatch Access Denied)
