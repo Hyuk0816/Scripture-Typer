@@ -1,0 +1,9 @@
+gemini:
+  api-key: test-api-key-for-unit-tests
+  model: gemini-2.5-flash
+  daily-limit: 5
+
+langfuse:
+  secret-key: ""
+  public-key: ""
+  base-url: https://cloud.langfuse.com

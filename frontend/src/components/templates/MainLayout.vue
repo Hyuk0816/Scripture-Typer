@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import Sidebar from '@/components/organisms/Sidebar.vue'
 import AppHeader from '@/components/organisms/AppHeader.vue'
+import ChatButton from '@/components/atoms/ChatButton.vue'
+import ChatPanel from '@/components/organisms/ChatPanel.vue'
 </script>
 
 <template>
@@ -12,5 +14,7 @@ import AppHeader from '@/components/organisms/AppHeader.vue'
         <router-view />
       </main>
     </div>
+    <ChatButton />
+    <ChatPanel />
   </div>
 </template>

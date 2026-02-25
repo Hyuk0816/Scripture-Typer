@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-24 21:25:26 |
+| Last Updated | 2026-02-25 23:00:49 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -89,15 +89,22 @@
 | 8-6 | 프론트: 게시글 상세 페이지 | 2026-02-24 21:20:00 | 2026-02-24 21:22:00 | Claude | BoardDetailPage.vue (상세+답글+역할분기+403처리) |
 | 8-7 | 프론트: 게시글 작성/수정 페이지 | 2026-02-24 21:22:00 | 2026-02-24 21:24:00 | Claude | BoardWritePage.vue (작성/수정 공용) |
 | 8-8 | 프론트: 라우터 + 헤더 연결 | 2026-02-24 21:24:00 | 2026-02-24 21:25:26 | Claude | 4개 라우트 + AppHeader 게시판 링크 |
-| **Phase 9** | **Gemini 채팅 (제한 기능 포함)** | - | - | - | SSE + 일일 5회 제한 |
-| 9-1 | Gemini Streaming API | - | - | - | |
-| 9-2 | 채팅 세션 CRUD API | - | - | - | |
-| 9-3 | 일일 사용량 제한 로직 | - | - | - | |
-| 9-4 | 사용량 체크 API | - | - | - | |
-| 9-5 | 시스템 프롬프트 강화 | - | - | - | |
-| 9-6 | Vue 채팅 패널 | - | - | - | |
-| 9-7 | Vue 채팅 세션 목록 | - | - | - | |
-| 9-8 | Pinia chatStore | - | - | - | |
+| **Phase 9** | **Gemini 채팅 (제한 기능 포함)** | 2026-02-24 22:00:53 | 2026-02-24 22:27:33 | Claude | SSE + 일일 5회 제한 |
+| 9-1 | 백엔드: build.gradle.kts + application.yml | 2026-02-24 22:00:53 | 2026-02-24 22:05:00 | Claude | WebFlux 의존성, Gemini 설정 (api-key, model, daily-limit) |
+| 9-2 | 백엔드: Repository + DTO | 2026-02-24 22:05:00 | 2026-02-24 22:08:00 | Claude | ChatSessionRepo, ChatMessageRepo, DTO 6개 (record) |
+| 9-3 | 백엔드: GeminiService (WebClient SSE) | 2026-02-24 22:08:00 | 2026-02-24 22:12:00 | Claude | WebClient → Gemini API SSE → SseEmitter 중계 |
+| 9-4 | 백엔드: GeminiUsageService (Redis 일일 제한) | 2026-02-24 22:12:00 | 2026-02-24 22:15:00 | Claude | Redis INCR→체크, ADMIN 무제한, DB Role 조회 |
+| 9-5 | 백엔드: ChatService + ChatController | 2026-02-24 22:15:00 | 2026-02-24 22:18:00 | Claude | 7개 메서드, 7개 엔드포인트 |
+| 9-6 | 프론트: 타입 + API + Store | 2026-02-24 22:18:00 | 2026-02-24 22:22:00 | Claude | types/chat.ts, chatApi, Pinia chatStore (SSE fetch 파싱) |
+| 9-7 | 프론트: 채팅 컴포넌트 + MainLayout 통합 | 2026-02-24 22:22:00 | 2026-02-24 22:27:33 | Claude | 5개 컴포넌트 + MainLayout ChatButton/ChatPanel |
+| **Phase 9-A** | **LangChain4j 도입 (WebClient→LangChain4j 전환)** | 2026-02-25 22:18:17 | 2026-02-25 22:22:22 | Claude | Gemini 스트리밍 안정화 + LangSmith 연동 기반 |
+| 9-A-1 | build.gradle.kts: webflux → langchain4j-google-ai-gemini 교체 | 2026-02-25 22:18:17 | 2026-02-25 22:20:00 | Claude | dev.langchain4j:langchain4j-google-ai-gemini:1.9.1 |
+| 9-A-2 | GeminiService 전면 재작성 (LangChain4j StreamingChatModel) | 2026-02-25 22:20:00 | 2026-02-25 22:22:22 | Claude | WebClient/DataBuffer/processChunk 제거 → StreamingChatResponseHandler 콜백 |
+| **Phase 9-B** | **LangFuse 연동 (LLM Observability)** | 2026-02-25 22:53:00 | 2026-02-25 23:00:49 | Claude | 프롬프트/응답/토큰 사용량 추적 |
+| 9-B-1 | application.yml + application-local.yml LangFuse 설정 추가 | 2026-02-25 22:53:00 | 2026-02-25 22:55:00 | Claude | langfuse.secret-key, public-key, base-url (env var + local 하드코딩) |
+| 9-B-2 | LangfuseTraceService 생성 (REST API 클라이언트) | 2026-02-25 22:55:00 | 2026-02-25 22:58:00 | Claude | HttpClient 비동기 POST /api/public/ingestion, Basic Auth, trace+generation batch |
+| 9-B-3 | LangfuseChatModelListener 생성 (ChatModelListener 구현) | 2026-02-25 22:58:00 | 2026-02-25 23:00:00 | Claude | onRequest→traceId 기록, onResponse→LangFuse 전송, onError→에러 트레이스 |
+| 9-B-4 | GeminiService에 LangFuse 리스너 등록 | 2026-02-25 23:00:00 | 2026-02-25 23:00:49 | Claude | .listeners(List.of(langfuseListener)) + application-test.yml 갱신 |
 | **Phase 10** | **Redis 캐싱 전략** | - | - | - | 진도 추적 최적화 |
 | 10-1 | Redis 설정 및 RedisTemplate 구성 | - | - | - | |
 | 10-2 | 진도 캐시 키 전략 설계 | - | - | - | |
@@ -130,6 +137,9 @@
 | 12 | 통독/필사 진행률 완전 독립 | 공유 진행률 | 각 모드별 독립 API, 독립 store. 사용자 지정 |
 | 13 | Bible CSV를 CommandLineRunner + JDBC batch로 로딩 | (A) DataGrip 수동 import | 코드로 관리, 앱 시작 시 자동 로딩, count>0이면 skip (멱등성). Decision #7 변경 |
 | 14 | ~~통독 뷰 반응형 분기: 웹=페이지네이션, 모바일=스크롤~~ → 통독 뷰 모바일/데스크톱 통일 페이지네이션 | (A) 통일된 스크롤 뷰 ~~(B) 통일된 페이지네이션~~ | 모바일 무한 스크롤 시 진도 추적 불가 문제 → 모바일/데스크톱 모두 1절/5절/10절 페이지네이션으로 통일. 사용자 지정 |
+
+| 15 | WebClient+SseEmitter → LangChain4j StreamingChatModel 전환 | (A) WebClient 직접 호출 유지+버퍼링 수정 (B) Spring AI (C) LangChain4j | WebClient DataBuffer 청크 분할로 SSE 스트림 끊김 반복 발생. LangChain4j가 Gemini SDK 내장, 스트리밍 콜백 안정적, LangSmith 연동 기반 제공. spring-boot-starter-webflux 의존성 제거 |
+| 16 | LLM Observability로 LangFuse Cloud 선택 | (A) LangSmith (B) LangFuse (C) 자체 로깅 | LangSmith는 LangChain4j에 네이티브 자동 연동 없음 (Python LangChain만 지원). LangFuse 무료 50K obs/월 vs LangSmith 5K traces/월. REST API + ChatModelListener 조합으로 수동 연동 용이 |
 
 ### Decision #4 상세: User 엔티티 & 가입 DTO 정의
 
@@ -168,13 +178,16 @@
 | 6 | `feat/typing-mode` | completed | PR #11 |
 | 7 | `feat/dashboard-mypage` | completed | - |
 | 8 | `feat/board` | completed | PR #13 |
-| 9 | `feat/gemini-chat` | - | - |
+| 9 | `feat/gemini-chat` | completed | - |
 | 10 | `feat/redis-caching` | - | - |
 | 11 | `chore/integration-test` | - | - |
 
 ## 4. Error & Fix Log
 | Timestamp | Step | Error Description | Fix Applied | Notes |
 |:---:|:---:|:---|:---|:---|
+| 2026-02-25 22:25 | 9-A | contextLoads() 실패 - LangChain4j GeminiService 빈 생성 시 apiKey 빈값 | application-test.yml 생성 + @ActiveProfiles("test") | 테스트 환경 gemini 설정 분리 |
+| 2026-02-25 22:27 | 9-A | ProgressCacheServiceTest NPE at line 68 | ValueOperations mock 추가 | saveLastVerse에 opsForValue() 호출 추가 후 테스트 미갱신 |
+| 2026-02-25 22:28 | 9-A | ProgressServiceTest assertion 실패 at line 289 | containsExactlyInAnyOrder로 변경 | HashMap.values() 순서 미보장 → 순서 무관 검증으로 수정 |
 
 ## 5. Key Implementation Notes
 
@@ -392,6 +405,81 @@
   - router/index.ts: board-list, board-create, board-detail, board-edit 4개 라우트 (MainLayout children)
   - AppHeader.vue: "게시판" 링크 추가 (마이페이지와 관리자 사이)
 - **커밋 8개**: Repository+DTO, Service, Controller, 타입+API+Store, 리스트 페이지, 상세 페이지, 작성/수정 페이지, 라우터+헤더
+
+### Phase 9: Gemini 채팅 기능
+- **Step 9-1: 의존성 + 설정**
+  - build.gradle.kts: `spring-boot-starter-webflux` 추가 (WebClient SSE 스트리밍용)
+  - application.yml: `gemini.api-key`, `gemini.model`, `gemini.daily-limit` 설정
+- **Step 9-2: Repository + DTO**
+  - ChatSessionRepository: findByUserIdOrderByUpdatedAtDesc
+  - ChatMessageRepository: findBySessionIdOrderByCreatedAtAsc
+  - DTO 6개 (Java record): ChatStreamRequest (inner MessageItem, ChatContext), ChatSessionCreateRequest, ChatMessageRequest, ChatSessionResponse (from 팩토리), ChatMessageResponse (from 팩토리), ChatUsageResponse
+- **Step 9-3: GeminiService**
+  - WebClient → Gemini API (streamGenerateContent?alt=sse) POST
+  - Flux<DataBuffer> 구독 → "data: " 파싱 → candidates[0].content.parts[0].text 추출
+  - SseEmitter로 프론트에 실시간 중계, 120초 타임아웃
+  - buildSystemPrompt(): 한국어 성경 도우미 + context(bookName, chapter, verse) 참고
+- **Step 9-4: GeminiUsageService**
+  - Redis key: "chat:usage:{userId}:{yyyy-MM-dd}", TTL 86400초
+  - checkAndIncrement(): INCR → 체크 → 초과 시 DECR 롤백 + DailyLimitExceededException
+  - ADMIN 무제한 (DB에서 Role 직접 조회, JWT claim 미신뢰)
+  - getUsageToday(): Redis GET → ChatUsageResponse(used, limit, unlimited)
+- **Step 9-5: ChatService + ChatController**
+  - ChatService 7개 메서드: getSessions, getMessages, createSession (title 30자 truncate), addMessage, deleteSession, getUsage, streamChat (사용량 체크 선행)
+  - ChatController 7개 엔드포인트: POST /stream (SseEmitter), GET /usage, GET /sessions, GET /sessions/{id}/messages, POST /sessions (201), POST /sessions/{id}/messages (201), DELETE /sessions/{id} (204)
+- **Step 9-6: 프론트엔드 기반**
+  - types/chat.ts: ChatMessage, ChatSession, ChatUsage 인터페이스
+  - api.ts: chatApi 6개 함수 + fetch API (SSE ReadableStream 파싱)
+  - stores/chat.ts: Pinia composable store, React chatStore 이식
+    - State: messages, isOpen, isLoading, sessions, currentSessionId, view, usage
+    - sendMessage(): fetch('/api/chat/stream') → ReadableStream → 실시간 메시지 업데이트
+    - 429 응답 → 사용량 초과 메시지, fetchUsage() 자동 갱신
+- **Step 9-7: 채팅 컴포넌트**
+  - atoms/ChatButton.vue: FAB (fixed bottom-right), amber-600 원형 버튼
+  - molecules/ChatMessageBubble.vue: user(amber)/assistant(white) 말풍선 + 스트리밍 인디케이터
+  - molecules/ChatInput.vue: textarea + 전송 + IME compositionstart/end + disabled
+  - organisms/ChatSessionList.vue: 세션 목록 + 새 대화 + 삭제 + formatDate
+  - organisms/ChatPanel.vue: 슬라이드 드로어 + 대화/목록 탭 + 사용량 진행 바 + 초과 시 입력 차단
+  - MainLayout.vue: ChatButton + ChatPanel 추가
+- **커밋 7개**: 의존성+설정, Repository+DTO, GeminiService, GeminiUsageService, ChatService+Controller, 타입+API+Store, 컴포넌트+MainLayout
+
+### Phase 9-A: LangChain4j 도입
+- **Step 9-A-1: 의존성 교체**
+  - `spring-boot-starter-webflux` 제거 → `dev.langchain4j:langchain4j-google-ai-gemini:1.9.1` 추가
+  - WebClient, DataBuffer, DataBufferUtils, Flux, Disposable 등 reactive 의존성 완전 제거
+- **Step 9-A-2: GeminiService 재작성**
+  - 기존: WebClient → Gemini REST API → bodyToFlux(DataBuffer.class) → StringBuilder 버퍼링 → processChunk → SseEmitter
+  - 신규: GoogleAiGeminiStreamingChatModel → StreamingChatResponseHandler 콜백 → SseEmitter
+  - SystemMessage + UserMessage + AiMessage로 대화 히스토리 구성 (LangChain4j ChatMessage 타입)
+  - maxOutputTokens: 1024, temperature: 0.7
+  - DataBuffer 청크 분할 문제 근본 해결 (LangChain4j SDK가 내부 처리)
+### Phase 9-B: LangFuse 연동
+- **Step 9-B-1: 설정**
+  - application.yml: `langfuse.secret-key`, `langfuse.public-key`, `langfuse.base-url` (env var 플레이스홀더)
+  - application-local.yml: LangFuse Cloud 실제 키 하드코딩
+  - application-test.yml: 빈 키 (LangFuse 비활성화)
+- **Step 9-B-2: LangfuseTraceService**
+  - `POST /api/public/ingestion` REST API 호출 (Basic Auth: publicKey:secretKey)
+  - batch 이벤트: `trace-create` + `observation-create` (type=GENERATION)
+  - HttpClient.sendAsync() 비동기 전송 (응답 대기 없음, 채팅 응답 지연 방지)
+  - `@PostConstruct`에서 키 검증 → enabled 플래그 (키 없으면 자동 비활성화)
+- **Step 9-B-3: LangfuseChatModelListener**
+  - LangChain4j `ChatModelListener` 구현
+  - `onRequest()`: traceId(UUID) + startTime 기록 (attributes map)
+  - `onResponse()`: 입력 메시지, 출력 텍스트, 모델명, 토큰 사용량, 소요 시간 추출 → sendTrace()
+  - `onError()`: 에러 메시지 포함 trace 전송
+  - `extractText()`: SystemMessage/AiMessage → text(), UserMessage → contents() TextContent 추출
+- **Step 9-B-4: GeminiService 연동**
+  - 생성자에 `LangfuseChatModelListener` 주입
+  - `GoogleAiGeminiStreamingChatModel.builder().listeners(List.of(langfuseListener))`
+  - 모든 Gemini 호출이 자동으로 LangFuse에 trace 전송
+
+- **관련 버그 수정 이력** (Phase 9-A 도입 배경):
+  - SecurityConfig: `DispatcherType.ASYNC.permitAll()` 추가 (SseEmitter async dispatch Access Denied)
+  - GeminiPromptTemplate enum: `.getSystemPrompt()` 호출 누락 (enum 이름이 전달되던 버그)
+  - application.yml: `${GEMINI_API_KEY:하드코딩값}` 기본값 설정 (로컬 IntelliJ .env 미인식)
+  - application-local.yml 생성 + .gitignore 추가
+  - 프론트엔드 stores/chat.ts: SSE 버퍼링 추가 (sseBuffer)
 
 ## 6. Scope Changes
 | # | Type | Description | Impact | Decision |
