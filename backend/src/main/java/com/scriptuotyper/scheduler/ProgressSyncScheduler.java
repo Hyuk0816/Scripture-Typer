@@ -20,25 +20,46 @@ public class ProgressSyncScheduler {
     /**
      * 3시간마다 Redis dirty 키를 DB로 동기화.
      * dirty → syncing 원자적 교체 후 syncing 키만 처리.
+     * 이전 실행에서 실패한 키도 재시도.
      */
     @Scheduled(cron = "0 0 */3 * * *")
     public void syncDirtyProgressToDb() {
-        Set<String> syncingKeys = progressCacheService.swapDirtyToSyncing();
-        if (syncingKeys.isEmpty()) {
-            return;
-        }
-
-        log.info("Progress sync started: {} keys", syncingKeys.size());
         int success = 0;
         int fail = 0;
 
-        for (String key : syncingKeys) {
-            try {
-                progressService.syncToDb(key);
-                success++;
-            } catch (Exception e) {
-                fail++;
-                log.error("Failed to sync key: {}", key, e);
+        // 1. 이전 실행에서 실패한 키 재시도
+        Set<String> failedKeys = progressCacheService.popFailedKeys();
+        if (!failedKeys.isEmpty()) {
+            log.info("Retrying {} previously failed keys", failedKeys.size());
+            for (String key : failedKeys) {
+                try {
+                    progressService.syncToDb(key);
+                    success++;
+                } catch (Exception e) {
+                    fail++;
+                    log.error("Retry failed for key: {}", key, e);
+                    progressCacheService.markFailed(key);
+                }
+            }
+        }
+
+        // 2. 새로운 dirty 키 동기화
+        Set<String> syncingKeys = progressCacheService.swapDirtyToSyncing();
+        if (syncingKeys.isEmpty() && failedKeys.isEmpty()) {
+            return;
+        }
+
+        if (!syncingKeys.isEmpty()) {
+            log.info("Progress sync started: {} keys", syncingKeys.size());
+            for (String key : syncingKeys) {
+                try {
+                    progressService.syncToDb(key);
+                    success++;
+                } catch (Exception e) {
+                    fail++;
+                    log.error("Failed to sync key: {}", key, e);
+                    progressCacheService.markFailed(key);
+                }
             }
         }
 
