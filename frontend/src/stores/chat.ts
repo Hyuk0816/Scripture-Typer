@@ -153,23 +153,37 @@ export const useChatStore = defineStore('chat', () => {
       if (!reader) throw new Error('No response stream')
 
       const decoder = new TextDecoder()
+      let sseBuffer = ''
+      let streamDone = false
 
-      while (true) {
+      while (!streamDone) {
         const { done, value } = await reader.read()
         if (done) break
 
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n').filter((l) => l.startsWith('data:'))
+        sseBuffer += decoder.decode(value, { stream: true })
+
+        // 완전한 라인만 처리, 불완전한 마지막 라인은 버퍼에 유지
+        const lastNewline = sseBuffer.lastIndexOf('\n')
+        if (lastNewline < 0) continue
+
+        const complete = sseBuffer.slice(0, lastNewline + 1)
+        sseBuffer = sseBuffer.slice(lastNewline + 1)
+
+        const lines = complete.split('\n').filter((l) => l.startsWith('data:'))
 
         for (const line of lines) {
           const data = line.slice(5).trim()
-          if (data === '[DONE]') break
+          if (data === '[DONE]') {
+            streamDone = true
+            break
+          }
 
           try {
             const parsed = JSON.parse(data)
             if (parsed.error) {
               fullAssistantContent = `오류: ${parsed.error}`
               updateAssistantMessage(assistantMessage.id, fullAssistantContent)
+              streamDone = true
               break
             }
             if (parsed.content) {
