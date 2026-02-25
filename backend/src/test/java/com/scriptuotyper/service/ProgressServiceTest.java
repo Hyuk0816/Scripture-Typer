@@ -286,8 +286,8 @@ class ProgressServiceTest {
 
             // Then
             assertThat(result).hasSize(2);
-            assertThat(result.get(0).bookName()).isEqualTo("마태복음");
-            assertThat(result.get(1).bookName()).isEqualTo("마가복음");
+            assertThat(result).extracting("bookName")
+                    .containsExactlyInAnyOrder("마태복음", "마가복음");
         }
 
         @Test

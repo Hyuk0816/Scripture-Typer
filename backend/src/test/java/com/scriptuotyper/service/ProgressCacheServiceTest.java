@@ -10,6 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +29,9 @@ class ProgressCacheServiceTest {
 
     @Mock
     private SetOperations<String, String> setOperations;
+
+    @Mock
+    private ValueOperations<String, String> valueOperations;
 
     @InjectMocks
     private ProgressCacheService progressCacheService;
@@ -63,6 +67,7 @@ class ProgressCacheServiceTest {
             // Given
             given(redisTemplate.opsForHash()).willReturn(hashOperations);
             given(redisTemplate.opsForSet()).willReturn(setOperations);
+            given(redisTemplate.opsForValue()).willReturn(valueOperations);
 
             // When
             progressCacheService.saveLastVerse(USER_ID, MODE, BOOK_NAME, CHAPTER, 10);
