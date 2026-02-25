@@ -42,6 +42,11 @@ gemini:
   model: ${GEMINI_MODEL:gemini-2.5-flash}
   daily-limit: 5
 
+langfuse:
+  secret-key: ${LANGFUSE_SECRET_KEY:}
+  public-key: ${LANGFUSE_PUBLIC_KEY:}
+  base-url: ${LANGFUSE_BASE_URL:https://cloud.langfuse.com}
+
 server:
   port: 8080
 
