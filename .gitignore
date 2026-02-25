@@ -16,6 +16,7 @@ work-report.old.md
 BIBLE_202602082053.csv
 .mcp.json
 .envrc
+application-local.yml
 
 # Crawling scripts & data (별도 관리)
 new-bible-data-crawl.md

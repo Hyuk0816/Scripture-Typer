@@ -21,7 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BibleDataLoader implements CommandLineRunner {
 
-    private static final String CSV_FILE = "bible/BIBLE_202602082053.csv";
+    private static final String CSV_FILE = "bible/BIBLE_KNT.csv";
     private static final int BATCH_SIZE = 500;
 
     private final BibleRepository bibleRepository;
