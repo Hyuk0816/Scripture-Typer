@@ -34,11 +34,11 @@ async function handleLogout() {
       </svg>
     </button>
 
-    <router-link to="/" class="text-lg font-semibold text-gray-800 hover:text-amber-700 transition-colors">
+    <router-link to="/" class="text-lg font-semibold text-gray-800 hover:text-amber-700 transition-colors whitespace-nowrap">
       Scripture Typer
     </router-link>
 
-    <span v-if="isReadingOrTyping && bookName && chapter" class="text-sm text-gray-500 ml-2">
+    <span v-if="isReadingOrTyping && bookName && chapter" class="text-sm text-gray-500 ml-2 whitespace-nowrap hidden sm:inline">
       {{ bookName }} {{ chapter }}장
     </span>
 
@@ -46,33 +46,36 @@ async function handleLogout() {
 
     <div class="flex-1" />
 
-    <router-link
-      to="/mypage"
-      class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
-    >
-      마이페이지
-    </router-link>
+    <!-- Desktop nav links -->
+    <nav class="hidden lg:flex items-center gap-1">
+      <router-link
+        to="/mypage"
+        class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+      >
+        마이페이지
+      </router-link>
 
-    <router-link
-      to="/board"
-      class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
-    >
-      게시판
-    </router-link>
+      <router-link
+        to="/board"
+        class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+      >
+        게시판
+      </router-link>
 
-    <router-link
-      v-if="authStore.isAdmin"
-      to="/admin/users"
-      class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
-    >
-      관리자
-    </router-link>
+      <router-link
+        v-if="authStore.isAdmin"
+        to="/admin/users"
+        class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+      >
+        관리자
+      </router-link>
 
-    <button
-      @click="handleLogout"
-      class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
-    >
-      로그아웃
-    </button>
+      <button
+        @click="handleLogout"
+        class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+      >
+        로그아웃
+      </button>
+    </nav>
   </header>
 </template>

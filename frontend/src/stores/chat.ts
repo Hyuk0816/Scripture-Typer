@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { ChatMessage, ChatSession, ChatUsage } from '@/types/chat'
 import { chatApi, getAccessToken } from '@/utils/api'
+import { useUiStore } from '@/stores/ui'
 
 export const useChatStore = defineStore('chat', () => {
   const messages = ref<ChatMessage[]>([])
@@ -11,9 +12,21 @@ export const useChatStore = defineStore('chat', () => {
   const currentSessionId = ref<number | null>(null)
   const view = ref<'chat' | 'list'>('chat')
   const usage = ref<ChatUsage>({ used: 0, limit: 5, unlimited: false })
+  const isFullscreen = ref(false)
 
   function toggleChat() {
-    isOpen.value = !isOpen.value
+    const opening = !isOpen.value
+    isOpen.value = opening
+    if (opening) {
+      const uiStore = useUiStore()
+      if (uiStore.sidebarOpen && window.innerWidth < 768) {
+        uiStore.sidebarOpen = false
+      }
+    }
+  }
+
+  function toggleFullscreen() {
+    isFullscreen.value = !isFullscreen.value
   }
 
   function setView(v: 'chat' | 'list') {
@@ -221,6 +234,17 @@ export const useChatStore = defineStore('chat', () => {
     currentSessionId.value = null
   }
 
+  function resetStore() {
+    messages.value = []
+    isOpen.value = false
+    isLoading.value = false
+    sessions.value = []
+    currentSessionId.value = null
+    view.value = 'chat'
+    usage.value = { used: 0, limit: 5, unlimited: false }
+    isFullscreen.value = false
+  }
+
   return {
     messages,
     isOpen,
@@ -229,7 +253,9 @@ export const useChatStore = defineStore('chat', () => {
     currentSessionId,
     view,
     usage,
+    isFullscreen,
     toggleChat,
+    toggleFullscreen,
     setView,
     fetchSessions,
     selectSession,
@@ -238,5 +264,6 @@ export const useChatStore = defineStore('chat', () => {
     fetchUsage,
     sendMessage,
     clearMessages,
+    resetStore,
   }
 })

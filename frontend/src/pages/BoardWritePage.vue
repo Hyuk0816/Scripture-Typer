@@ -2,12 +2,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBoardStore } from '@/stores/board'
+import { useAuthStore } from '@/stores/auth'
 import type { PostType, BoardRequest } from '@/types/board'
 import Spinner from '@/components/atoms/Spinner.vue'
 
 const route = useRoute()
 const router = useRouter()
 const boardStore = useBoardStore()
+const authStore = useAuthStore()
 
 const boardId = computed(() => route.params.id ? Number(route.params.id) : null)
 const isEditMode = computed(() => boardId.value !== null)
@@ -18,11 +20,17 @@ const content = ref('')
 const loading = ref(false)
 const error = ref('')
 
-const postTypeOptions: { value: PostType; label: string }[] = [
-  { value: 'BIBLE_QUESTION', label: '성경질문' },
-  { value: 'FREE', label: '자유' },
-  { value: 'SUGGESTION', label: '제안' },
-]
+const postTypeOptions = computed(() => {
+  const options: { value: PostType; label: string }[] = [
+    { value: 'BIBLE_QUESTION', label: '성경질문' },
+    { value: 'FREE', label: '자유' },
+    { value: 'SUGGESTION', label: '제안' },
+  ]
+  if (authStore.isAdmin) {
+    options.unshift({ value: 'NOTICE', label: '공지' })
+  }
+  return options
+})
 
 const isValid = computed(() => title.value.trim() && content.value.trim())
 

@@ -58,8 +58,50 @@ function formatDate(dateStr: string): string {
       해당 조건의 사용자가 없습니다
     </div>
 
-    <!-- Table -->
-    <table v-else class="w-full">
+    <!-- Content -->
+    <template v-else>
+      <!-- Mobile Card Layout -->
+      <div class="md:hidden divide-y divide-gray-50">
+        <div
+          v-for="user in users"
+          :key="user.id"
+          class="p-4 space-y-2"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-medium text-gray-800">{{ user.name }}</span>
+              <StatusBadge type="role" :value="user.role" />
+              <StatusBadge type="status" :value="user.status" />
+            </div>
+            <div class="flex gap-2 shrink-0 ml-2">
+              <button
+                v-if="user.status === 'PENDING' || user.status === 'INACTIVE'"
+                :disabled="actionLoading === user.id"
+                class="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                @click="handleActivate(user.id)"
+              >
+                승인
+              </button>
+              <button
+                v-if="user.status === 'ACTIVE'"
+                :disabled="actionLoading === user.id"
+                class="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                @click="handleDeactivate(user.id)"
+              >
+                비활성화
+              </button>
+            </div>
+          </div>
+          <div class="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-1">
+            <span>{{ user.email }}</span>
+            <span>{{ user.ttorae }}</span>
+            <span>{{ formatDate(user.createdAt) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop Table -->
+      <table class="hidden md:table w-full">
       <thead>
         <tr class="border-b border-gray-100 text-left text-sm text-gray-500">
           <th class="px-6 py-4 font-medium">이름</th>
@@ -110,5 +152,6 @@ function formatDate(dateStr: string): string {
         </tr>
       </tbody>
     </table>
+    </template>
   </div>
 </template>

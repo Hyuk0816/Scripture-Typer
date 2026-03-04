@@ -1,4 +1,4 @@
-export type PostType = 'BIBLE_QUESTION' | 'FREE' | 'SUGGESTION'
+export type PostType = 'NOTICE' | 'BIBLE_QUESTION' | 'FREE' | 'SUGGESTION'
 
 export interface BoardListItem {
   id: number
