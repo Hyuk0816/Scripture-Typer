@@ -11,6 +11,7 @@ const boardStore = useBoardStore()
 type TabId = 'ALL' | PostType
 const tabs: { id: TabId; label: string }[] = [
   { id: 'ALL', label: '전체' },
+  { id: 'NOTICE', label: '공지' },
   { id: 'BIBLE_QUESTION', label: '성경질문' },
   { id: 'FREE', label: '자유' },
   { id: 'SUGGESTION', label: '제안' },
@@ -29,6 +30,8 @@ function goToPage(page: number) {
 
 function postTypeBadgeClass(postType: string) {
   switch (postType) {
+    case 'NOTICE':
+      return 'bg-red-100 text-red-700'
     case 'BIBLE_QUESTION':
       return 'bg-amber-100 text-amber-700'
     case 'FREE':
@@ -42,6 +45,8 @@ function postTypeBadgeClass(postType: string) {
 
 function postTypeLabel(postType: string) {
   switch (postType) {
+    case 'NOTICE':
+      return '공지'
     case 'BIBLE_QUESTION':
       return '성경질문'
     case 'FREE':
@@ -68,10 +73,10 @@ onMounted(() => {
 <template>
   <div class="max-w-3xl mx-auto">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-6 mt-2">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">게시판</h1>
-        <p class="text-sm text-gray-500 mt-1">자유롭게 소통하고 질문하세요</p>
+    <div class="flex items-center justify-between mb-6 mt-2 gap-3">
+      <div class="min-w-0">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-800">게시판</h1>
+        <p class="text-xs sm:text-sm text-gray-500 mt-1">자유롭게 소통하고 질문하세요</p>
       </div>
       <button
         @click="router.push({ name: 'board-create' })"
@@ -82,12 +87,12 @@ onMounted(() => {
     </div>
 
     <!-- Category Tabs -->
-    <div class="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6">
+    <div class="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6 overflow-x-auto">
       <button
         v-for="tab in tabs"
         :key="tab.id"
         @click="selectTab(tab.id)"
-        class="flex-1 py-2 text-sm font-medium rounded-md transition-colors"
+        class="flex-1 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap min-w-0"
         :class="activeTab === tab.id ? 'bg-white text-amber-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
       >
         {{ tab.label }}
@@ -115,7 +120,12 @@ onMounted(() => {
         v-for="post in boardStore.boards"
         :key="post.id"
         @click="router.push({ name: 'board-detail', params: { id: post.id } })"
-        class="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-left hover:shadow-md hover:border-gray-200 transition-all"
+        :class="[
+          'w-full rounded-xl shadow-sm p-4 text-left hover:shadow-md transition-all',
+          post.postType === 'NOTICE'
+            ? 'bg-red-50 border border-red-200 hover:border-red-300'
+            : 'bg-white border border-gray-100 hover:border-gray-200',
+        ]"
       >
         <div class="flex items-center gap-2 mb-1">
           <span

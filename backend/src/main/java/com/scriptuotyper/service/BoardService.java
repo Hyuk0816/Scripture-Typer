@@ -37,6 +37,11 @@ public class BoardService {
     @Transactional
     public Long createBoard(Long userId, BoardRequest request) {
         User user = findUser(userId);
+
+        if (request.postType() == PostType.NOTICE && user.getRole() != Role.ADMIN) {
+            throw new UnauthorizedBoardAccessException();
+        }
+
         Board board = Board.builder()
                 .user(user)
                 .postType(request.postType())
@@ -48,9 +53,14 @@ public class BoardService {
 
     @Transactional(readOnly = true)
     public Page<BoardListResponse> getBoards(PostType postType, Pageable pageable) {
-        Page<Board> boards = (postType != null)
-                ? boardRepository.findByPostTypeOrderByCreatedAtDesc(postType, pageable)
-                : boardRepository.findAllByOrderByCreatedAtDesc(pageable);
+        Page<Board> boards;
+        if (postType == PostType.NOTICE) {
+            boards = boardRepository.findByPostTypeOrderByCreatedAtAsc(postType, pageable);
+        } else if (postType != null) {
+            boards = boardRepository.findByPostTypeOrderByCreatedAtDesc(postType, pageable);
+        } else {
+            boards = boardRepository.findAllWithNoticesPinned(pageable);
+        }
         return boards.map(BoardListResponse::from);
     }
 
@@ -97,6 +107,10 @@ public class BoardService {
     public Long createReply(Long boardId, Long userId, ReplyRequest request) {
         Board board = findBoard(boardId);
         User user = findUser(userId);
+
+        if (board.getPostType() == PostType.NOTICE) {
+            throw new UnauthorizedBoardAccessException();
+        }
 
         if (board.getPostType() == PostType.BIBLE_QUESTION) {
             if (!PRIVILEGED_ROLES.contains(user.getRole())) {

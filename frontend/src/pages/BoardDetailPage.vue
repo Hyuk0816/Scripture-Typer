@@ -24,6 +24,7 @@ const canModify = computed(() => isAuthor.value || isAdmin.value)
 
 const canReply = computed(() => {
   if (!board.value) return false
+  if (board.value.postType === 'NOTICE') return false
   if (board.value.postType !== 'BIBLE_QUESTION') return true
   const role = authStore.user?.role
   return role === 'PASTOR' || role === 'MOKJANG' || role === 'ADMIN'
@@ -31,6 +32,7 @@ const canReply = computed(() => {
 
 function postTypeBadgeClass(postType: string) {
   switch (postType) {
+    case 'NOTICE': return 'bg-red-100 text-red-700'
     case 'BIBLE_QUESTION': return 'bg-amber-100 text-amber-700'
     case 'FREE': return 'bg-blue-100 text-blue-700'
     case 'SUGGESTION': return 'bg-green-100 text-green-700'
@@ -40,6 +42,7 @@ function postTypeBadgeClass(postType: string) {
 
 function postTypeLabel(postType: string) {
   switch (postType) {
+    case 'NOTICE': return '공지'
     case 'BIBLE_QUESTION': return '성경질문'
     case 'FREE': return '자유'
     case 'SUGGESTION': return '제안'
@@ -267,6 +270,12 @@ onMounted(async () => {
               답글 작성
             </button>
           </div>
+        </div>
+        <div
+          v-else-if="board.postType === 'NOTICE'"
+          class="mt-4 text-center text-sm text-gray-400 py-4"
+        >
+          공지글에는 답글을 작성할 수 없습니다.
         </div>
         <div
           v-else-if="board.postType === 'BIBLE_QUESTION'"

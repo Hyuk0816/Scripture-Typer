@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { AuthUser, JwtPayload, LoginRequest, SignupRequest } from '@/types/auth'
 import { authApi, setTokens, clearTokens, getAccessToken } from '@/utils/api'
+import { useChatStore } from '@/stores/chat'
 
 function decodeJwt(token: string): JwtPayload | null {
   try {
@@ -54,6 +55,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(credentials: LoginRequest): Promise<void> {
+    const chatStore = useChatStore()
+    chatStore.resetStore()
     const { data } = await authApi.login(credentials)
     setTokens(data)
     setUserFromToken(data.accessToken)
@@ -67,6 +70,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await authApi.logout()
     } finally {
+      const chatStore = useChatStore()
+      chatStore.resetStore()
       clearTokens()
       user.value = null
     }
