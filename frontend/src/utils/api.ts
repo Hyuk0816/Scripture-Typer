@@ -290,6 +290,14 @@ export const chatApi = {
   },
 }
 
+// --- Log API ---
+
+export const logApi = {
+  logMenuAccess(data: { menuName: string; path: string }) {
+    return api.post<void>('/log/menu-access', data).catch(() => {})
+  },
+}
+
 // --- Admin Statistics API ---
 
 export const adminStatsApi = {

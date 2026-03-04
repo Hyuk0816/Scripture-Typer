@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { logApi } from '@/utils/api'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -99,6 +100,13 @@ router.beforeEach((to) => {
 
   if (to.meta.requiresAdmin && !authStore.isAdmin) {
     return '/'
+  }
+})
+
+router.afterEach((to) => {
+  const authStore = useAuthStore()
+  if (authStore.isAuthenticated && to.name) {
+    logApi.logMenuAccess({ menuName: String(to.name), path: to.fullPath })
   }
 })
 
