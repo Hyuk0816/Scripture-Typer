@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
+import { useChatStore } from '@/stores/chat'
 
 export type Testament = 'OLD' | 'NEW'
 
@@ -9,7 +10,12 @@ export const useUiStore = defineStore('ui', () => {
   const expandedBook = ref<string | null>(null)
 
   function toggleSidebar() {
-    sidebarOpen.value = !sidebarOpen.value
+    const opening = !sidebarOpen.value
+    sidebarOpen.value = opening
+    if (opening) {
+      const chatStore = useChatStore()
+      if (chatStore.isOpen) chatStore.toggleChat()
+    }
   }
 
   function setActiveTestament(testament: Testament) {
