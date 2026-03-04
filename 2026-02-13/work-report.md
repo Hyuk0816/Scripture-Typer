@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-02-25 23:41:14 |
+| Last Updated | 2026-03-04 22:50:44 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -111,12 +111,23 @@
 | 10-3 | keys() → SCAN 교체 | 2026-02-25 23:36:00 | 2026-02-25 23:38:00 | Claude | findAllUserProgress()에서 scanKeys() 비블로킹 조회 |
 | 10-4 | Redis 장애 fallback | 2026-02-25 23:38:00 | 2026-02-25 23:40:00 | Claude | save/get 전 try-catch, 실패 시 DB 직접 쓰기/읽기 |
 | 10-5 | 실패 키 재시도 (progress:failed set) | 2026-02-25 23:40:00 | 2026-02-25 23:41:14 | Claude | 스케줄러에서 failed set 먼저 재시도 → 재실패 시 다시 등록 |
-| **Phase 11** | **통합 및 마무리** | - | - | - | E2E 검증 |
-| 11-1 | 전체 Docker Compose 테스트 | - | - | - | |
-| 11-2 | 데이터 마이그레이션 스크립트 | - | - | - | |
-| 11-3 | API 통합 테스트 | - | - | - | |
-| 11-4 | 프론트엔드 반응형 검증 | - | - | - | |
-| 11-5 | 보안 검증 | - | - | - | |
+| **Phase 11** | **관리자 통계 대시보드** | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | Chart.js + vue-chartjs |
+| 11-1 | UserLoginLog 엔티티 + 레포지토리 | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | 엔티티(id, user FK, loginAt, ipAddress) + 일별 집계 쿼리 |
+| 11-2 | AuthService/Controller 로그인 로그 저장 | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | login()에 UserLoginLog 저장, IP 추출 (X-Forwarded-For) |
+| 11-3 | 집계 쿼리 (ProgressRepo, ChatMessageRepo) | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | countDailyProgressByUser, countMonthlyProgress, countDailyChatByUser, countMonthlyChatQuestions |
+| 11-4 | DTO 4개 (record) | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | DailyLoginStat, DailyProgressStat, DailyChatStat, MonthlyStat |
+| 11-5 | AdminStatisticsService | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | 4개 메서드 (getDailyLogin/Progress/Chat, getMonthly) |
+| 11-6 | AdminStatisticsController | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | GET /api/admin/stats/* 4개 엔드포인트 |
+| 11-7 | chart.js + vue-chartjs 설치 | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | npm install chart.js vue-chartjs |
+| 11-8 | 프론트: 타입 + API + Store | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | admin-stats.ts, adminStatsApi, adminStats store |
+| 11-9 | 프론트: 컴포넌트 5개 + 페이지 | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | DateRangePicker, LoginDailyChart, ProgressDailyTable, ChatDailyChart, MonthlySummaryCards, AdminStatisticsPage |
+| 11-10 | 프론트: 라우터 + 관리자 네비게이션 | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | /admin/stats 라우트, 회원관리↔통계 탭 |
+| **Phase 12** | **통합 및 마무리** | - | - | - | E2E 검증 |
+| 12-1 | 전체 Docker Compose 테스트 | - | - | - | |
+| 12-2 | 데이터 마이그레이션 스크립트 | - | - | - | |
+| 12-3 | API 통합 테스트 | - | - | - | |
+| 12-4 | 프론트엔드 반응형 검증 | - | - | - | |
+| 12-5 | 보안 검증 | - | - | - | |
 
 ## 3. Architecture Decisions
 | # | Decision | Alternatives Considered | Rationale |
@@ -140,6 +151,9 @@
 | 16 | LLM Observability로 LangFuse Cloud 선택 | (A) LangSmith (B) LangFuse (C) 자체 로깅 | LangSmith는 LangChain4j에 네이티브 자동 연동 없음 (Python LangChain만 지원). LangFuse 무료 50K obs/월 vs LangSmith 5K traces/월. REST API + ChatModelListener 조합으로 수동 연동 용이 |
 | 17 | complete 후 Redis 진도 키 삭제 | (A) 키 유지 (캐시 역할) (B) 키 삭제 (DB에 이미 저장) | 완료된 장은 DB에 저장 완료. Redis에 유지하면 비활성 키 영구 잔류. 삭제 후 재조회 시 Read-Through로 DB에서 복구 |
 | 18 | keys() → SCAN 교체 | (A) keys() 유지 (B) SCAN cursor 사용 | keys()는 Redis 단일 스레드를 블로킹하여 대규모 데이터 시 장애 유발. SCAN은 비블로킹 cursor 기반 |
+| 19 | 통계 DTO를 Java record로 구현 | (A) @Getter @Builder 클래스 (기존 UserListResponse 패턴) (B) record | 순수 데이터 전송 용도, record가 간결하고 불변성 보장. Java 21에서 안정적 지원 |
+| 20 | 접속 추적을 UserLoginLog 테이블로 구현 | (A) Redis 로그 (B) Spring Session (C) UserLoginLog JPA 엔티티 | 장기 통계 집계 필요하므로 DB 저장이 적합. Redis TTL 기반은 과거 데이터 유실 |
+| 21 | 차트 라이브러리로 Chart.js + vue-chartjs 선택 | (A) ECharts (B) D3.js (C) Chart.js | 경량 (~200KB), Vue 3 래퍼 공식 지원, Bar/Stacked Bar 차트로 충분한 요구사항 |
 
 ### Decision #4 상세: User 엔티티 & 가입 DTO 정의
 
@@ -179,8 +193,9 @@
 | 7 | `feat/dashboard-mypage` | completed | - |
 | 8 | `feat/board` | completed | PR #13 |
 | 9 | `feat/gemini-chat` | completed | - |
-| 10 | `feat/redis-caching` | - | - |
-| 11 | `chore/integration-test` | - | - |
+| 10 | `feat/redis-caching` | completed | PR #15 |
+| 11 | `feat/ui-responsive-notice` | in progress | - |
+| 12 | `chore/integration-test` | - | - |
 
 ## 4. Error & Fix Log
 | Timestamp | Step | Error Description | Fix Applied | Notes |
@@ -495,6 +510,36 @@
   - `progress:failed` set 추가: sync 실패 키를 markFailed()로 등록
   - 스케줄러: dirty sync 전에 failed set 먼저 재시도
   - 재실패 시 다시 failed set에 등록 (다음 3시간 후 재시도)
+
+### Phase 11: 관리자 통계 대시보드
+- **Step 11-1~11-2: 백엔드 로그인 추적**
+  - UserLoginLog 엔티티: id, user(FK), loginAt(@CreatedDate), ipAddress(nullable, 45chars)
+  - 인덱스: (user_id, login_at)
+  - UserLoginLogRepository: countDailyLogins(start, end), countDailyLoginsByUser(start, end)
+  - AuthService.login(): @Transactional(readOnly=true) → @Transactional, UserLoginLog 저장
+  - AuthController.login(): HttpServletRequest → X-Forwarded-For / remoteAddr IP 추출
+- **Step 11-3: 집계 쿼리**
+  - ProgressRepository: countDailyProgressByUser (date, userId, userName, mode, SUM(readCount)), countMonthlyProgress (mode, SUM(readCount))
+  - ChatMessageRepository: countDailyChatByUser (date, userId, userName, COUNT where role='user'), countMonthlyChatQuestions
+- **Step 11-4~11-6: DTO + Service + Controller**
+  - DTO 4개 Java record: DailyLoginStatResponse, DailyProgressStatResponse, DailyChatStatResponse, MonthlyStatResponse
+  - AdminStatisticsService: 집계 쿼리 결과를 DTO로 변환, READING/TYPING 모드 merge, 월별 활동유저 distinct count
+  - AdminStatisticsController: GET /api/admin/stats/{login-daily|progress-daily|chat-daily|monthly}, @DateTimeFormat(iso = ISO.DATE)
+  - SecurityConfig 변경 불필요 (/api/admin/** hasRole("ADMIN") 기존 룰)
+- **Step 11-7~11-8: 프론트 기반**
+  - chart.js 4.x + vue-chartjs 5.x 설치
+  - types/admin-stats.ts: 4개 response 인터페이스 + 3개 detail 인터페이스
+  - api.ts: adminStatsApi 4개 함수
+  - stores/adminStats.ts: fetchAll (Promise.all 병렬), fetchDaily, fetchMonthly
+- **Step 11-9~11-10: 프론트 컴포넌트 + 라우팅**
+  - DateRangePicker molecule: v-model:startDate/endDate + @search emit
+  - LoginDailyChart organism: Bar 차트 (amber-600) + 유저별 상세 테이블
+  - ProgressDailyTable organism: 날짜별 그룹, 유저별 통독(blue)/필사(green) 카운트
+  - ChatDailyChart organism: Stacked Bar 차트 (유저별 색상) + 상세 테이블
+  - MonthlySummaryCards organism: 4칸 그리드 (활동유저/통독/필사/AI질문)
+  - AdminStatisticsPage: AdminTemplate + 4개 섹션 + DateRangePicker + Spinner
+  - /admin/stats 라우트 (requiresAuth + requiresAdmin)
+  - AdminUsersPage + AdminStatisticsPage: 회원관리↔통계 탭 네비게이션 상호 추가
 
 - **관련 버그 수정 이력** (Phase 9-A 도입 배경):
   - SecurityConfig: `DispatcherType.ASYNC.permitAll()` 추가 (SseEmitter async dispatch Access Denied)

@@ -25,6 +25,12 @@ import type {
   PageResponse,
 } from '@/types/board'
 import type { ChatSession, ChatUsage } from '@/types/chat'
+import type {
+  DailyLoginStatResponse,
+  DailyProgressStatResponse,
+  DailyChatStatResponse,
+  MonthlyStatResponse,
+} from '@/types/admin-stats'
 
 // --- Token utilities ---
 
@@ -281,6 +287,31 @@ export const chatApi = {
   },
   getUsage() {
     return api.get<ChatUsage>('/chat/usage')
+  },
+}
+
+// --- Admin Statistics API ---
+
+export const adminStatsApi = {
+  getDailyLoginStats(startDate: string, endDate: string) {
+    return api.get<DailyLoginStatResponse[]>('/admin/stats/login-daily', {
+      params: { startDate, endDate },
+    })
+  },
+  getDailyProgressStats(startDate: string, endDate: string) {
+    return api.get<DailyProgressStatResponse[]>('/admin/stats/progress-daily', {
+      params: { startDate, endDate },
+    })
+  },
+  getDailyChatStats(startDate: string, endDate: string) {
+    return api.get<DailyChatStatResponse[]>('/admin/stats/chat-daily', {
+      params: { startDate, endDate },
+    })
+  },
+  getMonthlyStats(year: number, month: number) {
+    return api.get<MonthlyStatResponse>('/admin/stats/monthly', {
+      params: { year, month },
+    })
   },
 }
 

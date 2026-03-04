@@ -5,6 +5,7 @@ import com.scriptuotyper.dto.auth.RefreshRequest;
 import com.scriptuotyper.dto.auth.SignupRequest;
 import com.scriptuotyper.dto.auth.TokenResponse;
 import com.scriptuotyper.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,8 +27,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request,
+                                               HttpServletRequest httpRequest) {
+        String ip = httpRequest.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty()) {
+            ip = httpRequest.getRemoteAddr();
+        }
+        return ResponseEntity.ok(authService.login(request, ip));
     }
 
     @PostMapping("/logout")

@@ -6,10 +6,12 @@ import com.scriptuotyper.common.exception.auth.InvalidCredentialsException;
 import com.scriptuotyper.common.exception.auth.InvalidTokenException;
 import com.scriptuotyper.common.exception.user.UserNotFoundException;
 import com.scriptuotyper.domain.user.User;
+import com.scriptuotyper.domain.user.UserLoginLog;
 import com.scriptuotyper.domain.user.UserStatus;
 import com.scriptuotyper.dto.auth.LoginRequest;
 import com.scriptuotyper.dto.auth.SignupRequest;
 import com.scriptuotyper.dto.auth.TokenResponse;
+import com.scriptuotyper.repository.UserLoginLogRepository;
 import com.scriptuotyper.repository.UserRepository;
 import com.scriptuotyper.security.JwtTokenProvider;
 import com.scriptuotyper.security.RefreshTokenService;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final UserLoginLogRepository userLoginLogRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
@@ -44,8 +47,8 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    @Transactional(readOnly = true)
-    public TokenResponse login(LoginRequest request) {
+    @Transactional
+    public TokenResponse login(LoginRequest request, String ipAddress) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(InvalidCredentialsException::new);
 
@@ -56,6 +59,11 @@ public class AuthService {
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new AccountNotApprovedException();
         }
+
+        userLoginLogRepository.save(UserLoginLog.builder()
+                .user(user)
+                .ipAddress(ipAddress)
+                .build());
 
         String accessToken = jwtTokenProvider.createAccessToken(
                 user.getId(), user.getEmail(), user.getRole().name());
