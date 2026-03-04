@@ -116,7 +116,7 @@ class ProgressServiceTest {
             assertThat(existingProgress.getReadCount()).isEqualTo(1);
             assertThat(existingProgress.getLastTypedVerse()).isEqualTo(15);
             then(progressRepository).should(times(1)).save(existingProgress);
-            then(progressCacheService).should(times(1)).setProgress(EXPECTED_KEY, 15, 1);
+            then(progressCacheService).should(times(1)).deleteProgressKey(EXPECTED_KEY);
         }
 
         @Test
@@ -167,7 +167,7 @@ class ProgressServiceTest {
 
             // Then
             then(progressRepository).should(times(1)).save(any(UserProgress.class));
-            then(progressCacheService).should(times(1)).setProgress(eq(EXPECTED_KEY), anyInt(), eq(1));
+            then(progressCacheService).should(times(1)).deleteProgressKey(EXPECTED_KEY);
         }
 
         @Test
