@@ -16,6 +16,7 @@ public class CorsConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:3333",
+                "http://localhost:3334",
                 "https://scripture-typer-nrj.kr",
                 "http://scripture-typer-nrj.kr"
         ));
