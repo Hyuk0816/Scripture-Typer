@@ -30,7 +30,9 @@ public class AuthController {
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request,
                                                HttpServletRequest httpRequest) {
         String ip = httpRequest.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty()) {
+        if (ip != null && !ip.isEmpty()) {
+            ip = ip.split(",")[0].trim();
+        } else {
             ip = httpRequest.getRemoteAddr();
         }
         return ResponseEntity.ok(authService.login(request, ip));
