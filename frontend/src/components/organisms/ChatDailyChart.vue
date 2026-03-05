@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -10,13 +10,45 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
+import PageNavigator from '@/components/molecules/PageNavigator.vue'
 import type { DailyChatStatResponse } from '@/types/admin-stats'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
+const PER_PAGE = 5
+
 const props = defineProps<{
   data: DailyChatStatResponse[]
 }>()
+
+interface FlatRow {
+  date: string
+  showDate: boolean
+  userId: number
+  userName: string
+  questionCount: number
+}
+
+const flatRows = computed<FlatRow[]>(() =>
+  props.data.flatMap((row) =>
+    row.users.map((u, i) => ({
+      date: row.date,
+      showDate: i === 0,
+      userId: u.userId,
+      userName: u.userName,
+      questionCount: u.questionCount,
+    }))
+  )
+)
+
+const currentPage = ref(1)
+const totalPages = computed(() => Math.max(1, Math.ceil(flatRows.value.length / PER_PAGE)))
+const pagedRows = computed(() => {
+  const start = (currentPage.value - 1) * PER_PAGE
+  return flatRows.value.slice(start, start + PER_PAGE)
+})
+
+watch(() => props.data, () => { currentPage.value = 1 })
 
 const COLORS = [
   'rgba(59, 130, 246, 0.7)',
@@ -88,23 +120,30 @@ const chartOptions = {
           </tr>
         </thead>
         <tbody>
-          <template v-for="row in data" :key="row.date">
-            <tr
-              v-for="(u, i) in row.users"
-              :key="`${row.date}-${u.userId}`"
-              class="border-b border-gray-50"
-            >
-              <td class="py-2 pr-4 text-gray-700">
-                {{ i === 0 ? row.date : '' }}
-              </td>
-              <td class="py-2 pr-4 text-gray-700">{{ u.userName }}</td>
-              <td class="py-2 text-center font-semibold text-violet-600">
-                {{ u.questionCount }}
-              </td>
-            </tr>
-          </template>
+          <tr
+            v-for="row in pagedRows"
+            :key="`${row.date}-${row.userId}`"
+            class="border-b border-gray-50"
+          >
+            <td class="py-2 pr-4 text-gray-700">
+              {{ row.showDate ? row.date : '' }}
+            </td>
+            <td class="py-2 pr-4 text-gray-700">{{ row.userName }}</td>
+            <td class="py-2 text-center font-semibold text-violet-600">
+              {{ row.questionCount }}
+            </td>
+          </tr>
         </tbody>
       </table>
+      <PageNavigator
+        v-if="totalPages > 1"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        class="py-4"
+        @prev="currentPage--"
+        @next="currentPage++"
+        @go-to="(p) => currentPage = p"
+      />
     </div>
   </div>
 </template>

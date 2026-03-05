@@ -1,14 +1,26 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import StatusBadge from '@/components/molecules/StatusBadge.vue'
 import Spinner from '@/components/atoms/Spinner.vue'
+import PageNavigator from '@/components/molecules/PageNavigator.vue'
 import type { UserListResponse } from '@/types/auth'
 import { adminApi } from '@/utils/api'
 
-defineProps<{
+const PER_PAGE = 5
+
+const props = defineProps<{
   users: UserListResponse[]
   loading: boolean
 }>()
+
+const currentPage = ref(1)
+const totalPages = computed(() => Math.max(1, Math.ceil(props.users.length / PER_PAGE)))
+const pagedUsers = computed(() => {
+  const start = (currentPage.value - 1) * PER_PAGE
+  return props.users.slice(start, start + PER_PAGE)
+})
+
+watch(() => props.users, () => { currentPage.value = 1 })
 
 const emit = defineEmits<{
   refresh: []
@@ -63,7 +75,7 @@ function formatDate(dateStr: string): string {
       <!-- Mobile Card Layout -->
       <div class="md:hidden divide-y divide-gray-50">
         <div
-          v-for="user in users"
+          v-for="user in pagedUsers"
           :key="user.id"
           class="p-4 space-y-2"
         >
@@ -115,7 +127,7 @@ function formatDate(dateStr: string): string {
       </thead>
       <tbody>
         <tr
-          v-for="user in users"
+          v-for="user in pagedUsers"
           :key="user.id"
           class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
         >
@@ -152,6 +164,17 @@ function formatDate(dateStr: string): string {
         </tr>
       </tbody>
     </table>
+
+      <!-- Pagination -->
+      <PageNavigator
+        v-if="totalPages > 1"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        class="py-4"
+        @prev="currentPage--"
+        @next="currentPage++"
+        @go-to="(p) => currentPage = p"
+      />
     </template>
   </div>
 </template>
