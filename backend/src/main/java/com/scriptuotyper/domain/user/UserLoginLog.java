@@ -30,7 +30,7 @@ public class UserLoginLog {
     @Column(name = "login_at", nullable = false, updatable = false)
     private LocalDateTime loginAt;
 
-    @Column(name = "ip_address", length = 45)
+    @Column(name = "ip_address", length = 100)
     private String ipAddress;
 
     @Builder
