@@ -14,6 +14,7 @@ export const useReadingStore = defineStore('reading', () => {
   const error = ref<string | null>(null)
   const saving = ref(false)
   const completing = ref(false)
+  const chapterCompleted = ref(false)
 
   // Progress
   const lastReadVerse = ref(0)
@@ -40,6 +41,7 @@ export const useReadingStore = defineStore('reading', () => {
     bookName.value = book
     chapter.value = ch
     currentPage.value = 1
+    chapterCompleted.value = false
 
     try {
       const [chapterRes, progressRes] = await Promise.all([
@@ -99,6 +101,7 @@ export const useReadingStore = defineStore('reading', () => {
       })
       readCount.value += 1
       lastReadVerse.value = verses.value.length
+      chapterCompleted.value = true
     } catch (err) {
       error.value = (err as Error).message
     } finally {
@@ -141,6 +144,7 @@ export const useReadingStore = defineStore('reading', () => {
     error,
     saving,
     completing,
+    chapterCompleted,
     lastReadVerse,
     readCount,
     perPage,

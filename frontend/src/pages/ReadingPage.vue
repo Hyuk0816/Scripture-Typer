@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useReadingStore } from '@/stores/reading'
 import type { PerPage } from '@/stores/reading'
 import Spinner from '@/components/atoms/Spinner.vue'
@@ -9,6 +9,7 @@ import PerPageSelector from '@/components/molecules/PerPageSelector.vue'
 import PageNavigator from '@/components/molecules/PageNavigator.vue'
 
 const route = useRoute()
+const router = useRouter()
 const store = useReadingStore()
 
 const bookName = computed(() => route.params.book as string)
@@ -27,6 +28,11 @@ watch(
 
 function handlePerPage(value: PerPage) {
   store.setPerPage(value)
+}
+
+function goNextChapter() {
+  const nextCh = chapter.value + 1
+  router.push(`/reading/${bookName.value}/${nextCh}`)
 }
 </script>
 
@@ -86,9 +92,10 @@ function handlePerPage(value: PerPage) {
         </div>
       </div>
 
-      <!-- Complete button -->
-      <div class="mt-6 flex justify-center">
+      <!-- Complete button (last page only) -->
+      <div v-if="store.isLastPage" class="mt-6 flex flex-col items-center gap-3">
         <button
+          v-if="!store.chapterCompleted"
           @click="store.completeChapter()"
           :disabled="store.completing"
           class="px-8 py-3 text-white font-medium rounded-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -105,6 +112,22 @@ function handlePerPage(value: PerPage) {
           </svg>
           통독 완료
         </button>
+
+        <!-- After completion: next chapter button -->
+        <div v-if="store.chapterCompleted" class="flex flex-col items-center gap-2">
+          <p class="text-sm text-green-600 font-medium">
+            {{ store.bookName }} {{ store.chapter }}장 통독 완료!
+          </p>
+          <button
+            @click="goNextChapter()"
+            class="px-8 py-3 text-white font-medium rounded-lg bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-2"
+          >
+            다음 장으로
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
