@@ -5,6 +5,7 @@ import com.scriptuotyper.domain.user.User;
 import com.scriptuotyper.domain.user.UserStatus;
 import com.scriptuotyper.dto.admin.UserListResponse;
 import com.scriptuotyper.repository.UserRepository;
+import com.scriptuotyper.service.ProgressCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import java.util.List;
 public class AdminService {
 
     private final UserRepository userRepository;
+    private final ProgressCacheService progressCacheService;
 
     @Transactional
     public void activateUser(Long userId) {
@@ -29,6 +31,7 @@ public class AdminService {
         User user = userRepository.findById(userId)
                 .orElseThrow(UserNotFoundException::new);
         user.changeStatus(UserStatus.INACTIVE);
+        progressCacheService.removeTypingRanking(userId);
     }
 
     @Transactional(readOnly = true)
