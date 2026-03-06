@@ -28,9 +28,7 @@ public class CacheConfig {
         Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
                 "bible:books", defaultConfig.entryTtl(Duration.ofHours(24)),
                 "bible:chapter", defaultConfig.entryTtl(Duration.ofHours(24)),
-                "ranking:top", defaultConfig.entryTtl(Duration.ofMinutes(5)),
-                "board:list", defaultConfig.entryTtl(Duration.ofMinutes(5)),
-                "board:detail", defaultConfig.entryTtl(Duration.ofMinutes(10))
+                "ranking:top", defaultConfig.entryTtl(Duration.ofMinutes(5))
         );
 
         return RedisCacheManager.builder(connectionFactory)
