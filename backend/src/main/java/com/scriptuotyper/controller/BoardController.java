@@ -87,7 +87,7 @@ public class BoardController {
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody ReplyRequest request
     ) {
-        boardService.updateReply(replyId, userId, request);
+        boardService.updateReply(id, replyId, userId, request);
     }
 
     @DeleteMapping("/{id}/replies/{replyId}")
@@ -97,6 +97,6 @@ public class BoardController {
             @PathVariable Long replyId,
             @AuthenticationPrincipal Long userId
     ) {
-        boardService.deleteReply(replyId, userId);
+        boardService.deleteReply(id, replyId, userId);
     }
 }
