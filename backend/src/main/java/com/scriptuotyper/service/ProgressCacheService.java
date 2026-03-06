@@ -2,6 +2,7 @@ package com.scriptuotyper.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -142,6 +143,7 @@ public class ProgressCacheService {
     /**
      * 필사 완료 시 랭킹 ZSET 점수 증가
      */
+    @CacheEvict(value = "ranking:top", allEntries = true)
     public void incrementTypingRanking(Long userId) {
         redisTemplate.opsForZSet().incrementScore(RANKING_TYPING_KEY, String.valueOf(userId), 1.0);
     }
