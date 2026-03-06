@@ -11,6 +11,7 @@ import com.scriptuotyper.domain.user.Role;
 import com.scriptuotyper.domain.user.User;
 import com.scriptuotyper.dto.board.BoardDetailResponse;
 import com.scriptuotyper.dto.board.BoardListResponse;
+import com.scriptuotyper.dto.board.BoardPage;
 import com.scriptuotyper.dto.board.BoardRequest;
 import com.scriptuotyper.dto.board.ReplyRequest;
 import com.scriptuotyper.repository.BoardRepository;
@@ -57,7 +58,7 @@ public class BoardService {
 
     @Transactional(readOnly = true)
     @Cacheable(value = "board:list", key = "T(String).valueOf(#postType) + ':' + #pageable.pageNumber + ':' + #pageable.pageSize")
-    public Page<BoardListResponse> getBoards(PostType postType, Pageable pageable) {
+    public BoardPage getBoards(PostType postType, Pageable pageable) {
         Page<Board> boards;
         if (postType == PostType.NOTICE) {
             boards = boardRepository.findByPostTypeOrderByCreatedAtAsc(postType, pageable);
@@ -66,7 +67,7 @@ public class BoardService {
         } else {
             boards = boardRepository.findAllWithNoticesPinned(pageable);
         }
-        return boards.map(BoardListResponse::from);
+        return BoardPage.from(boards.map(BoardListResponse::from));
     }
 
     @Transactional(readOnly = true)
