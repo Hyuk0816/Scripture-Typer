@@ -16,7 +16,7 @@ export const useTypingStore = defineStore('typing', () => {
   const loading = ref(false)
   const chapterCompleted = ref(false)
 
-  async function fetchChapter(book: string, ch: number) {
+  async function fetchChapter(book: string, ch: number, restart = false) {
     loading.value = true
     chapterCompleted.value = false
     bookName.value = book
@@ -31,7 +31,12 @@ export const useTypingStore = defineStore('typing', () => {
       verses.value = chapterRes.data.verses
       totalVerses.value = chapterRes.data.verses.length
 
-      if (progressRes) {
+      if (restart) {
+        // 다시 필사하기: 1절부터 시작
+        lastTypedVerse.value = 0
+        readCount.value = progressRes?.data.readCount ?? 0
+        currentVerseIndex.value = 0
+      } else if (progressRes) {
         lastTypedVerse.value = progressRes.data.lastTypedVerse
         readCount.value = progressRes.data.readCount
         // Resume from lastTypedVerse

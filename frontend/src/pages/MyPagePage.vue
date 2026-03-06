@@ -35,8 +35,9 @@ function navigateReading(p: ReadingProgressResponse) {
   router.push(`/reading/${p.bookName}/${p.chapter}`)
 }
 
-function navigateTyping(p: TypingProgressResponse) {
-  router.push(`/typing/${p.bookName}/${p.chapter}`)
+function navigateTyping(p: TypingProgressResponse, restart = false) {
+  const query = restart ? { restart: 'true' } : undefined
+  router.push({ path: `/typing/${p.bookName}/${p.chapter}`, query })
 }
 </script>
 
@@ -222,7 +223,7 @@ function navigateTyping(p: TypingProgressResponse) {
             <button
               v-for="p in typingCompleted"
               :key="`${p.bookName}-${p.chapter}`"
-              @click="navigateTyping(p)"
+              @click="navigateTyping(p, true)"
               class="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-left hover:shadow-md hover:border-gray-200 transition-all group"
             >
               <div class="flex items-center justify-between mb-2">

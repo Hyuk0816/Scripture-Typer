@@ -15,14 +15,15 @@ const { bookName, chapter, verses, currentVerseIndex, loading, chapterCompleted 
 
 const routeBook = computed(() => route.params.book as string)
 const routeChapter = computed(() => Number(route.params.chapter))
+const restart = computed(() => route.query.restart === 'true')
 
 const currentVerse = computed(() => verses.value[currentVerseIndex.value])
 
 watch(
-  [routeBook, routeChapter],
-  ([book, ch]) => {
+  [routeBook, routeChapter, restart],
+  ([book, ch, rs]) => {
     if (book && ch) {
-      typingStore.fetchChapter(book, ch)
+      typingStore.fetchChapter(book, ch, rs)
     }
   },
   { immediate: true },
