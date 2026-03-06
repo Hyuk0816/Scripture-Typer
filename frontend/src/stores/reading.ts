@@ -77,15 +77,16 @@ export const useReadingStore = defineStore('reading', () => {
   async function saveProgress(verseNumber: number) {
     if (saving.value) return
     saving.value = true
+    const previousVerse = lastReadVerse.value
+    lastReadVerse.value = verseNumber
     try {
       await progressApi.saveReadingProgress({
         bookName: bookName.value,
         chapter: chapter.value,
         lastReadVerse: verseNumber,
       })
-      lastReadVerse.value = verseNumber
     } catch {
-      // silent fail - progress save is non-critical
+      lastReadVerse.value = previousVerse
     } finally {
       saving.value = false
     }
