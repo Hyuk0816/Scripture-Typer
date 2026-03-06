@@ -558,6 +558,13 @@
 
 Type: `Added` | `Changed` | `Removed` | `Deferred`
 
+## 8. Open Issues
+| # | Priority | Title | Description | Status |
+|:---:|:---:|:---|:---|:---:|
+| 1 | HIGH | 랭킹 Redis 워밍업 | Redis 초기화/재시작 시 `ranking:typing` ZSET이 비어 랭킹이 안 나옴. 앱 시작 시 DB `user_progress`에서 TYPING 완료 건수를 집계하여 Redis ZSET에 자동 워밍업하는 `@PostConstruct` 또는 `ApplicationRunner` 로직 필요 | OPEN |
+| 2 | HIGH | 다시필사하기 시 마지막 절이 아닌 1절부터 시작 | 마이페이지 필사현황에서 완료된 필사 클릭 시 해당 장 마지막 절로 이동되어 1절만 쳐도 완료 처리됨. "다시필사하기" 시 해당 장 1절부터 시작하도록 수정 필요 (프론트: 라우팅 시 verse=1 전달, 백엔드: 다시필사 시 기존 progress 초기화) | OPEN |
+| 3 | MEDIUM | API 응답 속도 개선 | 네트워크 탭 기준 페이지 로딩 ~9초. 원인: ① `menu-access` API 3회 중복 호출 → 1회로 통합 필요 ② `Cache-Control: no-cache, no-store`로 모든 응답 캐싱 없음 → 변경 적은 데이터(메뉴 권한 등)에 짧은 캐시 헤더 추가 ③ Cloudflare Tunnel 홉 오버헤드 ④ 홈서버(LG 15U480, 8GB RAM)에서 Docker 6개 컨테이너 리소스 부족 가능성 → `docker stats` 확인 필요 | OPEN |
+
 ## 7. Work Summary
 | Item | Detail |
 |:---:|:---|

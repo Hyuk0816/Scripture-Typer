@@ -147,6 +147,13 @@ public class ProgressCacheService {
     }
 
     /**
+     * 유저 비활성화 시 랭킹 ZSET에서 제거
+     */
+    public void removeTypingRanking(Long userId) {
+        redisTemplate.opsForZSet().remove(RANKING_TYPING_KEY, String.valueOf(userId));
+    }
+
+    /**
      * 특정 유저의 특정 모드 진도 키를 모두 조회.
      * SCAN 사용 (keys() 대신 비블로킹).
      * @return key → {lastVerse, readCount, updatedAt} 맵
