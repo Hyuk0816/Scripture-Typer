@@ -3,6 +3,7 @@ package com.scriptuotyper.service;
 import com.scriptuotyper.dto.bible.*;
 import com.scriptuotyper.repository.BibleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ public class BibleService {
 
     private final BibleRepository bibleRepository;
 
+    @Cacheable("bible:books")
     public BooksResponse getBooks() {
         Map<String, List<BookSummaryResponse>> grouped = bibleRepository.findBookSummaries().stream()
                 .collect(Collectors.groupingBy(
@@ -30,6 +32,7 @@ public class BibleService {
         );
     }
 
+    @Cacheable(value = "bible:chapter", key = "#bookName + ':' + #chapter")
     public ChapterResponse getChapter(String bookName, int chapter) {
         var verses = bibleRepository.findByBookNameAndChapterOrderByVerseAsc(bookName, chapter)
                 .stream()

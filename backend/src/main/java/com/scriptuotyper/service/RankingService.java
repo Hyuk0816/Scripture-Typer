@@ -8,6 +8,7 @@ import com.scriptuotyper.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations.TypedTuple;
@@ -51,6 +52,7 @@ public class RankingService {
         log.info("Ranking warmup completed: {} users loaded", counts.size());
     }
 
+    @Cacheable(value = "ranking:top", key = "#limit")
     public List<RankingEntryResponse> getTopRanking(int limit) {
         Set<TypedTuple<String>> ranked = redisTemplate.opsForZSet()
                 .reverseRangeWithScores(RANKING_KEY, 0, limit - 1);

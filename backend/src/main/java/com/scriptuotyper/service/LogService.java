@@ -6,6 +6,7 @@ import com.scriptuotyper.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ public class LogService {
     private final UserMenuAccessLogRepository userMenuAccessLogRepository;
     private final UserRepository userRepository;
 
+    @Async
     @Transactional
     public void logMenuAccess(Long userId, String menuName, String path, String ipAddress) {
         apiAccessLogger.info("{} menu-access {} {}", userId, menuName, path);
