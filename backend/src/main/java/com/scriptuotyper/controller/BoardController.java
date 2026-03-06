@@ -2,12 +2,13 @@ package com.scriptuotyper.controller;
 
 import com.scriptuotyper.domain.board.PostType;
 import com.scriptuotyper.dto.board.BoardDetailResponse;
-import com.scriptuotyper.dto.board.BoardPage;
+import com.scriptuotyper.dto.board.BoardListResponse;
 import com.scriptuotyper.dto.board.BoardRequest;
 import com.scriptuotyper.dto.board.ReplyRequest;
 import com.scriptuotyper.service.BoardService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +34,7 @@ public class BoardController {
     }
 
     @GetMapping
-    public BoardPage getBoards(
+    public Page<BoardListResponse> getBoards(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) PostType postType
