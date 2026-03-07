@@ -11,12 +11,16 @@ import com.scriptuotyper.domain.user.Role;
 import com.scriptuotyper.domain.user.User;
 import com.scriptuotyper.dto.board.BoardDetailResponse;
 import com.scriptuotyper.dto.board.BoardListResponse;
+import com.scriptuotyper.dto.board.BoardPage;
 import com.scriptuotyper.dto.board.BoardRequest;
 import com.scriptuotyper.dto.board.ReplyRequest;
 import com.scriptuotyper.repository.BoardRepository;
 import com.scriptuotyper.repository.ReplyRepository;
 import com.scriptuotyper.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -34,6 +38,7 @@ public class BoardService {
 
     private static final Set<Role> PRIVILEGED_ROLES = Set.of(Role.PASTOR, Role.MOKJANG, Role.ADMIN);
 
+    @CacheEvict(value = "board:list", allEntries = true)
     @Transactional
     public Long createBoard(Long userId, BoardRequest request) {
         User user = findUser(userId);
@@ -51,8 +56,9 @@ public class BoardService {
         return boardRepository.save(board).getId();
     }
 
+    @Cacheable(value = "board:list", key = "(#postType != null ? #postType.name() : 'ALL') + ':' + #pageable.pageNumber + ':' + #pageable.pageSize")
     @Transactional(readOnly = true)
-    public Page<BoardListResponse> getBoards(PostType postType, Pageable pageable) {
+    public BoardPage getBoards(PostType postType, Pageable pageable) {
         Page<Board> boards;
         if (postType == PostType.NOTICE) {
             boards = boardRepository.findByPostTypeOrderByCreatedAtAsc(postType, pageable);
@@ -61,9 +67,10 @@ public class BoardService {
         } else {
             boards = boardRepository.findAllWithNoticesPinned(pageable);
         }
-        return boards.map(BoardListResponse::from);
+        return BoardPage.from(boards.map(BoardListResponse::from));
     }
 
+    @Cacheable(value = "board:detail", key = "#boardId", unless = "#result.postType() == 'BIBLE_QUESTION'")
     @Transactional(readOnly = true)
     public BoardDetailResponse getBoard(Long boardId, Long userId) {
         Board board = findBoard(boardId);
@@ -80,6 +87,10 @@ public class BoardService {
         return BoardDetailResponse.from(board);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "board:list", allEntries = true),
+            @CacheEvict(value = "board:detail", key = "#boardId")
+    })
     @Transactional
     public void updateBoard(Long boardId, Long userId, BoardRequest request) {
         Board board = findBoard(boardId);
@@ -89,6 +100,10 @@ public class BoardService {
         board.update(request.title(), request.content());
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "board:list", allEntries = true),
+            @CacheEvict(value = "board:detail", key = "#boardId")
+    })
     @Transactional
     public void deleteBoard(Long boardId, Long userId) {
         Board board = findBoard(boardId);
@@ -103,6 +118,7 @@ public class BoardService {
         boardRepository.delete(board);
     }
 
+    @CacheEvict(value = "board:detail", key = "#boardId")
     @Transactional
     public Long createReply(Long boardId, Long userId, ReplyRequest request) {
         Board board = findBoard(boardId);
@@ -126,6 +142,7 @@ public class BoardService {
         return replyRepository.save(reply).getId();
     }
 
+    @CacheEvict(value = "board:detail", key = "#boardId")
     @Transactional
     public void updateReply(Long boardId, Long replyId, Long userId, ReplyRequest request) {
         Reply reply = findReply(replyId);
@@ -135,6 +152,7 @@ public class BoardService {
         reply.update(request.content());
     }
 
+    @CacheEvict(value = "board:detail", key = "#boardId")
     @Transactional
     public void deleteReply(Long boardId, Long replyId, Long userId) {
         Reply reply = findReply(replyId);
