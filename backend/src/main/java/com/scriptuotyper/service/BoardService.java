@@ -56,7 +56,7 @@ public class BoardService {
         return boardRepository.save(board).getId();
     }
 
-    @Cacheable(value = "board:list", key = "#postType?.name() + ':' + #pageable.pageNumber + ':' + #pageable.pageSize")
+    @Cacheable(value = "board:list", key = "(#postType != null ? #postType.name() : 'ALL') + ':' + #pageable.pageNumber + ':' + #pageable.pageSize")
     @Transactional(readOnly = true)
     public BoardPage getBoards(PostType postType, Pageable pageable) {
         Page<Board> boards;
