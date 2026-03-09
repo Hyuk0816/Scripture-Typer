@@ -44,6 +44,18 @@ async function handleLogout() {
         마이페이지
       </button>
       <button
+        @click="navigateAndClose('/group')"
+        class="w-full text-left text-sm text-gray-600 hover:text-amber-700 hover:bg-amber-50 px-3 py-2 rounded-lg transition-colors"
+      >
+        그룹
+      </button>
+      <button
+        @click="navigateAndClose('/ranking')"
+        class="w-full text-left text-sm text-gray-600 hover:text-amber-700 hover:bg-amber-50 px-3 py-2 rounded-lg transition-colors"
+      >
+        랭킹
+      </button>
+      <button
         @click="navigateAndClose('/board')"
         class="w-full text-left text-sm text-gray-600 hover:text-amber-700 hover:bg-amber-50 px-3 py-2 rounded-lg transition-colors"
       >

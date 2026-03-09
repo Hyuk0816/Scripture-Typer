@@ -58,6 +58,21 @@ const router = createRouter({
           name: 'board-edit',
           component: () => import('@/pages/BoardWritePage.vue'),
         },
+        {
+          path: 'ranking',
+          name: 'ranking',
+          component: () => import('@/pages/RankingPage.vue'),
+        },
+        {
+          path: 'group',
+          name: 'group',
+          component: () => import('@/pages/GroupReadingPage.vue'),
+        },
+        {
+          path: 'group/:planId',
+          name: 'group-detail',
+          component: () => import('@/pages/GroupPlanDetailPage.vue'),
+        },
       ],
     },
     {
