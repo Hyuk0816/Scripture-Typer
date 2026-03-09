@@ -3,6 +3,7 @@ export interface GroupPlanRequest {
   startChapter: number
   endChapter: number
   mode: 'READING' | 'TYPING'
+  memberIds: number[]
 }
 
 export interface GroupPlanResponse {
@@ -36,4 +37,19 @@ export interface GroupPlanDetailResponse {
   createdAt: string
   totalChapters: number
   members: GroupMemberProgressResponse[]
+}
+
+export interface GroupInviteResponse {
+  planId: number
+  bookName: string
+  startChapter: number
+  endChapter: number
+  mode: 'READING' | 'TYPING'
+  createdByName: string
+  invitedAt: string
+}
+
+export interface AffiliationMemberResponse {
+  userId: number
+  name: string
 }

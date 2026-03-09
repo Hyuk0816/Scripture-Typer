@@ -35,7 +35,13 @@ import type {
   MonthlyStatResponse,
 } from '@/types/admin-stats'
 import type { AffiliationResponse, MainAffiliation } from '@/types/affiliation'
-import type { GroupPlanRequest, GroupPlanResponse, GroupPlanDetailResponse } from '@/types/group'
+import type {
+  GroupPlanRequest,
+  GroupPlanResponse,
+  GroupPlanDetailResponse,
+  GroupInviteResponse,
+  AffiliationMemberResponse,
+} from '@/types/group'
 
 // --- Token utilities ---
 
@@ -277,6 +283,21 @@ export const groupApi = {
   },
   completePlan(id: number) {
     return api.patch<void>(`/groups/plans/${id}/complete`)
+  },
+  acceptInvite(planId: number) {
+    return api.post<void>(`/groups/plans/${planId}/accept`)
+  },
+  declineInvite(planId: number) {
+    return api.post<void>(`/groups/plans/${planId}/decline`)
+  },
+  getPendingInvites() {
+    return api.get<GroupInviteResponse[]>('/groups/invites/pending')
+  },
+  getPendingInviteCount() {
+    return api.get<{ count: number }>('/groups/invites/pending/count')
+  },
+  getAffiliationMembers() {
+    return api.get<AffiliationMemberResponse[]>('/groups/members')
   },
 }
 

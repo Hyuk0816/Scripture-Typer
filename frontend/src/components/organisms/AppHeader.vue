@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
+import { useGroupStore } from '@/stores/group'
 import { useRoute, useRouter } from 'vue-router'
 import ModeTabs from '@/components/molecules/ModeTabs.vue'
 
 const uiStore = useUiStore()
 const authStore = useAuthStore()
+const groupStore = useGroupStore()
 const route = useRoute()
 const router = useRouter()
+
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    groupStore.fetchPendingInviteCount()
+  }
+})
 
 const bookName = computed(() => route.params.book as string)
 const chapter = computed(() => route.params.chapter as string)
@@ -57,9 +65,15 @@ async function handleLogout() {
 
       <router-link
         to="/group"
-        class="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+        class="relative text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
       >
         그룹
+        <span
+          v-if="groupStore.pendingInviteCount > 0"
+          class="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full px-1"
+        >
+          {{ groupStore.pendingInviteCount > 99 ? '99+' : groupStore.pendingInviteCount }}
+        </span>
       </router-link>
 
       <router-link
