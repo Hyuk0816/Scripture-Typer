@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { onMounted } from 'vue'
 import StatusBadge from '@/components/molecules/StatusBadge.vue'
 import Spinner from '@/components/atoms/Spinner.vue'
 import PageNavigator from '@/components/molecules/PageNavigator.vue'
 import type { UserListResponse } from '@/types/auth'
-import { adminApi } from '@/utils/api'
+import type { AffiliationResponse } from '@/types/affiliation'
+import { adminApi, affiliationApi } from '@/utils/api'
 
 const PER_PAGE = 5
 
@@ -27,6 +29,26 @@ const emit = defineEmits<{
 }>()
 
 const actionLoading = ref<number | null>(null)
+const affiliations = ref<AffiliationResponse[]>([])
+
+onMounted(async () => {
+  try {
+    const { data } = await affiliationApi.getAll()
+    affiliations.value = data
+  } catch {
+    // silent
+  }
+})
+
+async function handleAffiliationChange(userId: number, affiliationId: number | null) {
+  actionLoading.value = userId
+  try {
+    await adminApi.updateUserAffiliation(userId, affiliationId)
+    emit('refresh')
+  } finally {
+    actionLoading.value = null
+  }
+}
 
 async function handleActivate(userId: number) {
   actionLoading.value = userId
@@ -107,8 +129,19 @@ function formatDate(dateStr: string): string {
           <div class="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-1">
             <span>{{ user.email }}</span>
             <span>{{ user.ttorae }}</span>
+            <span>{{ user.affiliationName || '미지정' }}</span>
             <span>{{ formatDate(user.createdAt) }}</span>
           </div>
+          <select
+            :value="user.affiliationId"
+            class="mt-1 w-full text-xs border border-gray-200 rounded-lg px-2 py-1"
+            @change="handleAffiliationChange(user.id, ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null)"
+          >
+            <option :value="null">소속 미지정</option>
+            <option v-for="aff in affiliations" :key="aff.id" :value="aff.id">
+              {{ aff.displayName }}
+            </option>
+          </select>
         </div>
       </div>
 
@@ -121,6 +154,7 @@ function formatDate(dateStr: string): string {
           <th class="px-6 py-4 font-medium">또래</th>
           <th class="px-6 py-4 font-medium">역할</th>
           <th class="px-6 py-4 font-medium">상태</th>
+          <th class="px-6 py-4 font-medium">소속</th>
           <th class="px-6 py-4 font-medium">가입일</th>
           <th class="px-6 py-4 font-medium">관리</th>
         </tr>
@@ -139,6 +173,18 @@ function formatDate(dateStr: string): string {
           </td>
           <td class="px-6 py-4">
             <StatusBadge type="status" :value="user.status" />
+          </td>
+          <td class="px-6 py-4">
+            <select
+              :value="user.affiliationId"
+              class="text-xs border border-gray-200 rounded-lg px-2 py-1 w-32"
+              @change="handleAffiliationChange(user.id, ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null)"
+            >
+              <option :value="null">미지정</option>
+              <option v-for="aff in affiliations" :key="aff.id" :value="aff.id">
+                {{ aff.displayName }}
+              </option>
+            </select>
           </td>
           <td class="px-6 py-4 text-sm text-gray-500">{{ formatDate(user.createdAt) }}</td>
           <td class="px-6 py-4">

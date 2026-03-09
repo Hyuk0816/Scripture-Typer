@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -36,5 +37,13 @@ public class AdminController {
                 ? adminService.getUsersByStatus(status)
                 : adminService.getAllUsers();
         return ResponseEntity.ok(users);
+    }
+
+    @PatchMapping("/users/{id}/affiliation")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateUserAffiliation(
+            @PathVariable Long id,
+            @RequestBody Map<String, Long> body) {
+        adminService.updateUserAffiliation(id, body.get("affiliationId"));
     }
 }

@@ -16,6 +16,9 @@ import type {
   CompleteTypingRequest,
   TypingProgressResponse,
   RankingEntryResponse,
+  AffiliationRankingResponse,
+  GroupRankingResponse,
+  RankingMode,
 } from '@/types/progress'
 import type {
   BoardListItem,
@@ -31,6 +34,8 @@ import type {
   DailyChatStatResponse,
   MonthlyStatResponse,
 } from '@/types/admin-stats'
+import type { AffiliationResponse, MainAffiliation } from '@/types/affiliation'
+import type { GroupPlanRequest, GroupPlanResponse, GroupPlanDetailResponse } from '@/types/group'
 
 // --- Token utilities ---
 
@@ -162,6 +167,17 @@ export const authApi = {
   },
 }
 
+// --- Affiliation API ---
+
+export const affiliationApi = {
+  getAll() {
+    return api.get<AffiliationResponse[]>('/affiliations')
+  },
+  getSubs(main: MainAffiliation) {
+    return api.get<AffiliationResponse[]>(`/affiliations/${main}/subs`)
+  },
+}
+
 // --- Admin API ---
 
 export const adminApi = {
@@ -174,6 +190,9 @@ export const adminApi = {
   },
   deactivateUser(id: number) {
     return api.patch<void>(`/admin/users/${id}/deactivate`)
+  },
+  updateUserAffiliation(userId: number, affiliationId: number | null) {
+    return api.patch<void>(`/admin/users/${userId}/affiliation`, { affiliationId })
   },
 }
 
@@ -229,6 +248,35 @@ export const rankingApi = {
   getTypingRanking(limit?: number) {
     const params = limit ? { limit } : undefined
     return api.get<RankingEntryResponse[]>('/ranking/typing', { params })
+  },
+  getRanking(mode: RankingMode, limit?: number) {
+    return api.get<RankingEntryResponse[]>('/ranking', { params: { mode, limit } })
+  },
+  getMyAffiliationRanking(mode: RankingMode, limit?: number) {
+    return api.get<AffiliationRankingResponse>('/ranking/my-affiliation', { params: { mode, limit } })
+  },
+  getSarangbangRanking(mode: RankingMode) {
+    return api.get<GroupRankingResponse[]>('/ranking/sarangbang', { params: { mode } })
+  },
+  getAffiliationRanking(main: string, mode: RankingMode, limit?: number) {
+    return api.get<RankingEntryResponse[]>(`/ranking/affiliation/${main}`, { params: { mode, limit } })
+  },
+}
+
+// --- Group API ---
+
+export const groupApi = {
+  createPlan(data: GroupPlanRequest) {
+    return api.post<GroupPlanResponse>('/groups/plans', data)
+  },
+  getMyPlans() {
+    return api.get<GroupPlanResponse[]>('/groups/plans')
+  },
+  getPlanDetail(id: number) {
+    return api.get<GroupPlanDetailResponse>(`/groups/plans/${id}`)
+  },
+  completePlan(id: number) {
+    return api.patch<void>(`/groups/plans/${id}/complete`)
   },
 }
 

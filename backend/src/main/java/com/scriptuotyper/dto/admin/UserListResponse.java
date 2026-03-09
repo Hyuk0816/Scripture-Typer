@@ -20,6 +20,8 @@ public class UserListResponse {
     private Role role;
     private UserStatus status;
     private LocalDateTime createdAt;
+    private Long affiliationId;
+    private String affiliationName;
 
     public static UserListResponse from(User user) {
         return UserListResponse.builder()
@@ -31,6 +33,8 @@ public class UserListResponse {
                 .role(user.getRole())
                 .status(user.getStatus())
                 .createdAt(user.getCreatedAt())
+                .affiliationId(user.getAffiliation() != null ? user.getAffiliation().getId() : null)
+                .affiliationName(user.getAffiliation() != null ? user.getAffiliation().getDisplayName() : null)
                 .build();
     }
 }

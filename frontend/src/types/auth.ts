@@ -8,6 +8,7 @@ export interface SignupRequest {
   phone: string
   email: string
   password: string
+  affiliationId?: number | null
 }
 
 export interface LoginRequest {
@@ -33,6 +34,8 @@ export interface UserListResponse {
   role: Role
   status: UserStatus
   createdAt: string
+  affiliationId: number | null
+  affiliationName: string | null
 }
 
 export interface ErrorResponse {

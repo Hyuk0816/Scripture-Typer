@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import FormField from '@/components/molecules/FormField.vue'
+import AffiliationSelector from '@/components/molecules/AffiliationSelector.vue'
 import ButtonPrimary from '@/components/atoms/ButtonPrimary.vue'
 import ButtonSecondary from '@/components/atoms/ButtonSecondary.vue'
 import ErrorMessage from '@/components/atoms/ErrorMessage.vue'
@@ -10,6 +11,8 @@ import axios from 'axios'
 
 const authStore = useAuthStore()
 
+const affiliationId = ref<number | null>(null)
+
 const form = reactive<SignupRequest & { passwordConfirm: string }>({
   name: '',
   ttorae: 0,
@@ -17,6 +20,7 @@ const form = reactive<SignupRequest & { passwordConfirm: string }>({
   email: '',
   password: '',
   passwordConfirm: '',
+  affiliationId: null,
 })
 
 const errors = reactive({
@@ -84,6 +88,7 @@ async function handleSubmit() {
   loading.value = true
   try {
     const { passwordConfirm: _, ...signupData } = form
+    signupData.affiliationId = affiliationId.value
     await authStore.signup(signupData)
     signupComplete.value = true
   } catch (err) {
@@ -155,6 +160,8 @@ async function handleSubmit() {
       :error="errors.email"
       required
     />
+
+    <AffiliationSelector v-model="affiliationId" />
 
     <FormField
       id="password"
