@@ -41,3 +41,20 @@ export interface RankingEntryResponse {
   name: string
   completedChapters: number
 }
+
+export interface AffiliationRankingResponse {
+  affiliationName: string
+  myRank: number
+  myCompletedChapters: number
+  rankings: RankingEntryResponse[]
+}
+
+export interface GroupRankingResponse {
+  rank: number
+  affiliationId: number
+  affiliationName: string
+  totalCompletedChapters: number
+  memberCount: number
+}
+
+export type RankingMode = 'READING' | 'TYPING'

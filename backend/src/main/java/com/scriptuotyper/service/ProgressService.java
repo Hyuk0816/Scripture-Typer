@@ -74,6 +74,15 @@ public class ProgressService {
 
         progressRepository.save(progress);
 
+        // 통독 랭킹 ZSET 업데이트 (dual-write: 전역 + 소속별)
+        try {
+            Long affiliationId = progress.getUser().getAffiliation() != null
+                    ? progress.getUser().getAffiliation().getId() : null;
+            progressCacheService.incrementRanking(userId, ProgressMode.READING.name(), affiliationId);
+        } catch (Exception e) {
+            log.warn("Redis 통독 랭킹 업데이트 실패: {}", e.getMessage());
+        }
+
         // 완료된 장은 DB에 저장됐으므로 Redis 키 삭제
         try {
             String key = progressCacheService.buildKey(userId, ProgressMode.READING.name(), bookName, chapter);
@@ -220,9 +229,11 @@ public class ProgressService {
 
         progressRepository.save(progress);
 
-        // 랭킹 ZSET 업데이트
+        // 랭킹 ZSET 업데이트 (dual-write: 전역 + 소속별)
         try {
-            progressCacheService.incrementTypingRanking(userId);
+            Long affiliationId = progress.getUser().getAffiliation() != null
+                    ? progress.getUser().getAffiliation().getId() : null;
+            progressCacheService.incrementRanking(userId, ProgressMode.TYPING.name(), affiliationId);
         } catch (Exception e) {
             log.warn("Redis 랭킹 업데이트 실패: {}", e.getMessage());
         }
