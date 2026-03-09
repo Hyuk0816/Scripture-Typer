@@ -266,7 +266,10 @@ function formatChapterRange(plan: { startChapter: number; endChapter: number }) 
             <span class="text-sm text-gray-700">{{ member.name }}</span>
           </label>
         </div>
-        <p v-else class="text-sm text-gray-400">같은 소속의 멤버가 없습니다</p>
+        <div v-else class="text-sm text-gray-400 space-y-1">
+          <p>같은 소속의 멤버가 없습니다</p>
+          <p class="text-xs">관리자 페이지에서 본인과 멤버들의 소속을 설정해주세요</p>
+        </div>
         <p v-if="selectedMemberIds.length > 0" class="text-xs text-gray-400 mt-1">
           {{ selectedMemberIds.length }}명 선택됨
         </p>

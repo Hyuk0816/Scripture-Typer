@@ -11,12 +11,14 @@ import com.scriptuotyper.repository.GroupReadingPlanRepository;
 import com.scriptuotyper.repository.ProgressRepository;
 import com.scriptuotyper.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GroupReadingService {
@@ -169,12 +171,18 @@ public class GroupReadingService {
                 .orElseThrow(UserNotFoundException::new);
 
         if (user.getAffiliation() == null) {
+            log.info("User {} has no affiliation, returning empty member list", userId);
             return List.of();
         }
 
-        return userRepository.findByAffiliationId(user.getAffiliation().getId())
-                .stream()
-                .filter(u -> !u.getId().equals(userId)) // exclude self
+        Long affiliationId = user.getAffiliation().getId();
+        log.info("User {} has affiliationId={}, fetching members", userId, affiliationId);
+
+        List<User> members = userRepository.findActiveByAffiliationId(affiliationId);
+        log.info("Found {} active members for affiliationId={}", members.size(), affiliationId);
+
+        return members.stream()
+                .filter(u -> !u.getId().equals(userId))
                 .map(AffiliationMemberResponse::from)
                 .toList();
     }
