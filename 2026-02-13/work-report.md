@@ -7,7 +7,7 @@
 | Tech Stack | Vue.js 3 + Spring Boot 4.0 + PostgreSQL + Redis |
 | Plan | 2026-02-13/work-plan.md |
 | Created | 2026-02-13 |
-| Last Updated | 2026-03-04 22:50:44 |
+| Last Updated | 2026-03-10 23:23:24 |
 
 ## 1. Compliance Rules (Strictly Enforced)
 1. Print and confirm compliance rules before starting any work
@@ -122,6 +122,16 @@
 | 11-8 | 프론트: 타입 + API + Store | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | admin-stats.ts, adminStatsApi, adminStats store |
 | 11-9 | 프론트: 컴포넌트 5개 + 페이지 | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | DateRangePicker, LoginDailyChart, ProgressDailyTable, ChatDailyChart, MonthlySummaryCards, AdminStatisticsPage |
 | 11-10 | 프론트: 라우터 + 관리자 네비게이션 | 2026-03-04 22:50:44 | 2026-03-04 22:50:44 | Claude | /admin/stats 라우트, 회원관리↔통계 탭 |
+| **Phase 12-A** | **소속 시스템 개선 - N+1 해결 + 예외처리 + 멤버별 장 범위** | 2026-03-10 23:15:11 | 2026-03-10 23:23:24 | Claude | N+1 전체 감사, 그룹 도메인 예외, 멤버별 장 범위 지정 |
+| 12-A-1 | Fix: Repository Fetch Join 쿼리 추가 (UserRepo 2, GroupPlanMemberRepo 3, GroupReadingPlanRepo 1, BoardRepo 1) | 2026-03-10 23:15:11 | 2026-03-10 23:18:00 | Claude | LazyInitializationException + N+1 전면 해결 |
+| 12-A-2 | Fix: RankingService @Transactional + fetch join + 루프 제거 | 2026-03-10 23:18:00 | 2026-03-10 23:19:00 | Claude | findByIdWithAffiliation, findByAffiliationIdIn 배치 |
+| 12-A-3 | Fix: GroupReadingService fetch join 메서드 적용 | 2026-03-10 23:19:00 | 2026-03-10 23:19:30 | Claude | getMyGroupPlans, getPlanDetail, getMyPendingInvites, getMyAffiliationMembers |
+| 12-A-4 | Fix: BoardService findByIdWithDetails fetch join 적용 | 2026-03-10 23:19:30 | 2026-03-10 23:20:00 | Claude | board+user+replies+replies.user 한번에 로드 |
+| 12-A-5 | Fix: GroupExceptionCode + 4개 도메인 예외 클래스 생성 | 2026-03-10 23:20:00 | 2026-03-10 23:20:30 | Claude | GROUP_001~004, IllegalState/Argument → BusinessException 교체 |
+| 12-A-6 | Fix: GroupReadingService 예외 교체 (5곳) | 2026-03-10 23:20:30 | 2026-03-10 23:21:00 | Claude | 500→400/404 올바른 HTTP 상태 반환 |
+| 12-A-7 | Feature: GroupPlanMember 엔티티 + DTO 수정 (멤버별 장 범위) | 2026-03-10 23:21:00 | 2026-03-10 23:22:00 | Claude | assignedStartChapter/EndChapter, MemberChapterAssignment, GroupPlanRequest 확장 |
+| 12-A-8 | Feature: ProgressRepository 유저별 범위 쿼리 + GroupReadingService 수정 | 2026-03-10 23:22:00 | 2026-03-10 23:22:30 | Claude | countCompletedChaptersForUser, sumReadCountForUser, createPlan/getPlanDetail 로직 |
+| 12-A-9 | Feature: 프론트엔드 멤버별 장 범위 UI | 2026-03-10 23:22:30 | 2026-03-10 23:23:24 | Claude | group.ts 타입, GroupReadingPage 체크박스+자동배분, MemberProgressBar 범위 표시 |
 | **Phase 12** | **통합 및 마무리** | - | - | - | E2E 검증 |
 | 12-1 | 전체 Docker Compose 테스트 | - | - | - | |
 | 12-2 | 데이터 마이그레이션 스크립트 | - | - | - | |
@@ -540,6 +550,27 @@
   - AdminStatisticsPage: AdminTemplate + 4개 섹션 + DateRangePicker + Spinner
   - /admin/stats 라우트 (requiresAuth + requiresAdmin)
   - AdminUsersPage + AdminStatisticsPage: 회원관리↔통계 탭 네비게이션 상호 추가
+
+### Phase 12-A: 소속 시스템 개선 - N+1 해결 + 예외처리 + 멤버별 장 범위
+- **Fix 1: N+1 / LazyInitializationException 전체 해결**
+  - UserRepository: `findByIdWithAffiliation()` (LEFT JOIN FETCH u.affiliation), `findByAffiliationIdIn()` (배치 쿼리)
+  - GroupPlanMemberRepository: `findByUserIdAndStatusWithPlan()`, `findByPlanIdAndStatusWithUser()`, `findByUserIdAndStatusWithPlanAndCreator()` (3개 fetch join)
+  - GroupReadingPlanRepository: `findByIdWithDetails()` (affiliation + createdBy)
+  - BoardRepository: `findByIdWithDetails()` (user + replies + replies.user)
+  - RankingService: 클래스 레벨 `@Transactional(readOnly=true)`, `findByIdWithAffiliation`, 루프→`findByAffiliationIdIn` 배치
+  - GroupReadingService: 모든 쿼리 fetch join 메서드로 교체
+  - BoardService: `findBoard()` → `findByIdWithDetails()` 교체
+- **Fix 2: 그룹 도메인 예외 처리**
+  - `GroupExceptionCode` enum (GROUP_001~004): 404 NOT_FOUND, 400 BAD_REQUEST
+  - 4개 예외 클래스: GroupPlanNotFoundException, GroupInviteNotFoundException, InvalidChapterRangeException, UserHasNoAffiliationException
+  - GroupReadingService 5곳 교체: IllegalState/ArgumentException → 도메인 BusinessException (500→400/404)
+- **Feature 3: 멤버별 장 범위 지정**
+  - GroupPlanMember 엔티티: `assignedStartChapter/EndChapter` nullable 컬럼 추가, `getEffective*()` fallback 메서드
+  - MemberChapterAssignment record DTO, GroupPlanRequest에 `memberAssignments` 추가 (레거시 memberIds 호환)
+  - GroupMemberProgressResponse: assigned 필드 3개 추가 (nullable), 레거시 호환 생성자
+  - ProgressRepository: `countCompletedChaptersForUser()`, `sumReadCountForUser()` 개별 유저 범위 쿼리
+  - GroupReadingService: createPlan() memberAssignments 우선 처리 + 범위 유효성 검증, getPlanDetail() hasAssignments 분기
+  - 프론트: group.ts 타입 확장, GroupReadingPage "멤버별 장 범위 지정" 체크박스 + 자동배분, GroupProgressGrid/MemberProgressBar 범위 표시
 
 - **관련 버그 수정 이력** (Phase 9-A 도입 배경):
   - SecurityConfig: `DispatcherType.ASYNC.permitAll()` 추가 (SseEmitter async dispatch Access Denied)

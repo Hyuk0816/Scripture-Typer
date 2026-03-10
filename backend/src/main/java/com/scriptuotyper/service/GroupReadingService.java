@@ -1,5 +1,9 @@
 package com.scriptuotyper.service;
 
+import com.scriptuotyper.common.exception.group.GroupInviteNotFoundException;
+import com.scriptuotyper.common.exception.group.GroupPlanNotFoundException;
+import com.scriptuotyper.common.exception.group.InvalidChapterRangeException;
+import com.scriptuotyper.common.exception.group.UserHasNoAffiliationException;
 import com.scriptuotyper.common.exception.user.UserNotFoundException;
 import com.scriptuotyper.domain.group.GroupInviteStatus;
 import com.scriptuotyper.domain.group.GroupPlanMember;
@@ -17,6 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -34,11 +41,11 @@ public class GroupReadingService {
                 .orElseThrow(UserNotFoundException::new);
 
         if (user.getAffiliation() == null) {
-            throw new IllegalStateException("소속이 지정되지 않은 사용자는 그룹 계획을 생성할 수 없습니다");
+            throw new UserHasNoAffiliationException();
         }
 
         if (request.getStartChapter() > request.getEndChapter()) {
-            throw new IllegalArgumentException("시작 장이 끝 장보다 클 수 없습니다");
+            throw new InvalidChapterRangeException();
         }
 
         GroupReadingPlan plan = GroupReadingPlan.builder()
@@ -52,39 +59,80 @@ public class GroupReadingService {
         groupPlanRepository.save(plan);
 
         // Creator is auto-accepted
-        groupPlanMemberRepository.save(GroupPlanMember.builder()
+        GroupPlanMember creatorMember = GroupPlanMember.builder()
                 .plan(plan)
                 .user(user)
                 .status(GroupInviteStatus.ACCEPTED)
-                .build());
+                .build();
 
-        // Invite selected members (exclude creator if included)
-        for (Long memberId : request.getMemberIds()) {
-            if (memberId.equals(userId)) continue;
-            User member = userRepository.findById(memberId).orElse(null);
-            if (member != null) {
-                groupPlanMemberRepository.save(GroupPlanMember.builder()
-                        .plan(plan)
-                        .user(member)
-                        .status(GroupInviteStatus.PENDING)
-                        .build());
+        if (request.getMemberAssignments() != null && !request.getMemberAssignments().isEmpty()) {
+            // memberAssignments 모드: 멤버별 장 범위 지정
+            Map<Long, MemberChapterAssignment> assignmentMap = request.getMemberAssignments().stream()
+                    .collect(Collectors.toMap(MemberChapterAssignment::userId, Function.identity()));
+
+            // 생성자에게도 범위 할당이 있으면 적용
+            MemberChapterAssignment creatorAssignment = assignmentMap.get(userId);
+            if (creatorAssignment != null) {
+                validateAssignmentRange(creatorAssignment, request.getStartChapter(), request.getEndChapter());
+                creatorMember.assignChapterRange(creatorAssignment.startChapter(), creatorAssignment.endChapter());
             }
+            groupPlanMemberRepository.save(creatorMember);
+
+            for (MemberChapterAssignment assignment : request.getMemberAssignments()) {
+                if (assignment.userId().equals(userId)) continue;
+                validateAssignmentRange(assignment, request.getStartChapter(), request.getEndChapter());
+                User member = userRepository.findById(assignment.userId()).orElse(null);
+                if (member != null) {
+                    GroupPlanMember planMember = GroupPlanMember.builder()
+                            .plan(plan)
+                            .user(member)
+                            .status(GroupInviteStatus.PENDING)
+                            .build();
+                    planMember.assignChapterRange(assignment.startChapter(), assignment.endChapter());
+                    groupPlanMemberRepository.save(planMember);
+                }
+            }
+        } else if (request.getMemberIds() != null && !request.getMemberIds().isEmpty()) {
+            // 레거시 모드: memberIds만 사용
+            groupPlanMemberRepository.save(creatorMember);
+            for (Long memberId : request.getMemberIds()) {
+                if (memberId.equals(userId)) continue;
+                User member = userRepository.findById(memberId).orElse(null);
+                if (member != null) {
+                    groupPlanMemberRepository.save(GroupPlanMember.builder()
+                            .plan(plan)
+                            .user(member)
+                            .status(GroupInviteStatus.PENDING)
+                            .build());
+                }
+            }
+        } else {
+            groupPlanMemberRepository.save(creatorMember);
         }
 
         return GroupPlanResponse.from(plan);
     }
 
+    private void validateAssignmentRange(MemberChapterAssignment assignment, int planStart, int planEnd) {
+        if (assignment.startChapter() > assignment.endChapter()) {
+            throw new InvalidChapterRangeException();
+        }
+        if (assignment.startChapter() < planStart || assignment.endChapter() > planEnd) {
+            throw new InvalidChapterRangeException();
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<GroupPlanResponse> getMyGroupPlans(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdWithAffiliation(userId)
                 .orElseThrow(UserNotFoundException::new);
 
         if (user.getAffiliation() == null) {
             return List.of();
         }
 
-        // Return plans where user is a member (accepted)
-        List<GroupPlanMember> memberships = groupPlanMemberRepository.findByUserIdAndStatus(userId, GroupInviteStatus.ACCEPTED);
+        // Return plans where user is a member (accepted) - fetch join to avoid N+1
+        List<GroupPlanMember> memberships = groupPlanMemberRepository.findByUserIdAndStatusWithPlan(userId, GroupInviteStatus.ACCEPTED);
         return memberships.stream()
                 .map(m -> GroupPlanResponse.from(m.getPlan()))
                 .toList();
@@ -92,38 +140,63 @@ public class GroupReadingService {
 
     @Transactional(readOnly = true)
     public GroupPlanDetailResponse getPlanDetail(Long planId) {
-        GroupReadingPlan plan = groupPlanRepository.findById(planId)
-                .orElseThrow(() -> new IllegalArgumentException("그룹 계획을 찾을 수 없습니다"));
+        GroupReadingPlan plan = groupPlanRepository.findByIdWithDetails(planId)
+                .orElseThrow(GroupPlanNotFoundException::new);
 
         int totalChapters = plan.getEndChapter() - plan.getStartChapter() + 1;
 
-        // Get accepted members only
-        List<GroupPlanMember> acceptedMembers = groupPlanMemberRepository.findByPlanIdAndStatus(planId, GroupInviteStatus.ACCEPTED);
-        List<Long> memberIds = acceptedMembers.stream().map(m -> m.getUser().getId()).toList();
+        // Get accepted members only - fetch join to avoid N+1
+        List<GroupPlanMember> acceptedMembers = groupPlanMemberRepository.findByPlanIdAndStatusWithUser(planId, GroupInviteStatus.ACCEPTED);
+
+        // 멤버별 장 범위 할당 여부 체크
+        boolean hasAssignments = acceptedMembers.stream()
+                .anyMatch(m -> m.getAssignedStartChapter() != null);
 
         List<GroupMemberProgressResponse> memberProgress = new ArrayList<>();
 
-        if (!memberIds.isEmpty()) {
-            List<Object[]> results = progressRepository.countGroupProgressByBook(
-                    plan.getMode(), plan.getBookName(), plan.getStartChapter(), plan.getEndChapter(), memberIds);
-
-            for (Object[] row : results) {
-                Long uid = (Long) row[0];
-                String name = (String) row[1];
-                Long completedChapters = (Long) row[2];
-                Long totalReadCount = (Long) row[3];
-                memberProgress.add(new GroupMemberProgressResponse(
-                        uid, name, completedChapters.intValue(), totalReadCount.intValue()));
-            }
-
-            // Add accepted members with no progress
-            List<Long> foundUserIds = memberProgress.stream()
-                    .map(GroupMemberProgressResponse::userId)
-                    .toList();
+        if (hasAssignments) {
+            // 멤버별 개별 범위 → 개별 쿼리
             for (GroupPlanMember member : acceptedMembers) {
-                if (!foundUserIds.contains(member.getUser().getId())) {
+                int startCh = member.getEffectiveStartChapter();
+                int endCh = member.getEffectiveEndChapter();
+                long completed = progressRepository.countCompletedChaptersForUser(
+                        plan.getMode(), plan.getBookName(), startCh, endCh, member.getUser().getId());
+                long readCount = progressRepository.sumReadCountForUser(
+                        plan.getMode(), plan.getBookName(), startCh, endCh, member.getUser().getId());
+                memberProgress.add(new GroupMemberProgressResponse(
+                        member.getUser().getId(),
+                        member.getUser().getName(),
+                        (int) completed,
+                        (int) readCount,
+                        member.getAssignedStartChapter(),
+                        member.getAssignedEndChapter(),
+                        member.getAssignedTotalChapters()));
+            }
+        } else {
+            // 기존 bulk 쿼리 로직
+            List<Long> memberIds = acceptedMembers.stream().map(m -> m.getUser().getId()).toList();
+            if (!memberIds.isEmpty()) {
+                List<Object[]> results = progressRepository.countGroupProgressByBook(
+                        plan.getMode(), plan.getBookName(), plan.getStartChapter(), plan.getEndChapter(), memberIds);
+
+                for (Object[] row : results) {
+                    Long uid = (Long) row[0];
+                    String name = (String) row[1];
+                    Long completedChapters = (Long) row[2];
+                    Long totalReadCount = (Long) row[3];
                     memberProgress.add(new GroupMemberProgressResponse(
-                            member.getUser().getId(), member.getUser().getName(), 0, 0));
+                            uid, name, completedChapters.intValue(), totalReadCount.intValue()));
+                }
+
+                // Add accepted members with no progress
+                List<Long> foundUserIds = memberProgress.stream()
+                        .map(GroupMemberProgressResponse::userId)
+                        .toList();
+                for (GroupPlanMember member : acceptedMembers) {
+                    if (!foundUserIds.contains(member.getUser().getId())) {
+                        memberProgress.add(new GroupMemberProgressResponse(
+                                member.getUser().getId(), member.getUser().getName(), 0, 0));
+                    }
                 }
             }
         }
@@ -134,27 +207,27 @@ public class GroupReadingService {
     @Transactional
     public void completePlan(Long planId) {
         GroupReadingPlan plan = groupPlanRepository.findById(planId)
-                .orElseThrow(() -> new IllegalArgumentException("그룹 계획을 찾을 수 없습니다"));
+                .orElseThrow(() -> new GroupPlanNotFoundException());
         plan.complete();
     }
 
     @Transactional
     public void acceptInvite(Long planId, Long userId) {
         GroupPlanMember member = groupPlanMemberRepository.findByPlanIdAndUserId(planId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다"));
+                .orElseThrow(() -> new GroupInviteNotFoundException());
         member.accept();
     }
 
     @Transactional
     public void declineInvite(Long planId, Long userId) {
         GroupPlanMember member = groupPlanMemberRepository.findByPlanIdAndUserId(planId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다"));
+                .orElseThrow(() -> new GroupInviteNotFoundException());
         member.decline();
     }
 
     @Transactional(readOnly = true)
     public List<GroupInviteResponse> getMyPendingInvites(Long userId) {
-        return groupPlanMemberRepository.findByUserIdAndStatus(userId, GroupInviteStatus.PENDING)
+        return groupPlanMemberRepository.findByUserIdAndStatusWithPlanAndCreator(userId, GroupInviteStatus.PENDING)
                 .stream()
                 .map(GroupInviteResponse::from)
                 .toList();
@@ -167,7 +240,7 @@ public class GroupReadingService {
 
     @Transactional(readOnly = true)
     public List<AffiliationMemberResponse> getMyAffiliationMembers(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdWithAffiliation(userId)
                 .orElseThrow(UserNotFoundException::new);
 
         if (user.getAffiliation() == null) {

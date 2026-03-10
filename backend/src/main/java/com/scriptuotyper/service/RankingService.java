@@ -20,6 +20,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations.TypedTuple;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.function.Function;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class RankingService {
 
     private static final String RANKING_KEY = "ranking:typing";
@@ -97,7 +99,7 @@ public class RankingService {
      * 내 소속 내 랭킹
      */
     public AffiliationRankingResponse getMyAffiliationRanking(Long userId, ProgressMode mode, int limit) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdWithAffiliation(userId)
                 .orElseThrow(UserNotFoundException::new);
 
         if (user.getAffiliation() == null) {
@@ -182,11 +184,8 @@ public class RankingService {
         List<Affiliation> affiliations = affiliationRepository.findByMainAffiliation(main);
         Set<Long> affiliationIds = affiliations.stream().map(Affiliation::getId).collect(Collectors.toSet());
 
-        // Get all users in this main affiliation
-        List<User> users = new ArrayList<>();
-        for (Long affId : affiliationIds) {
-            users.addAll(userRepository.findByAffiliationId(affId));
-        }
+        // Get all users in this main affiliation (single query instead of N loop)
+        List<User> users = affiliationIds.isEmpty() ? List.of() : userRepository.findByAffiliationIdIn(affiliationIds);
 
         Set<Long> userIds = users.stream().map(User::getId).collect(Collectors.toSet());
 

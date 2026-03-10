@@ -51,7 +51,6 @@ export const useRankingStore = defineStore('ranking', () => {
       await Promise.allSettled([
         fetchOverallRanking(),
         fetchAffiliationRanking(),
-        fetchSarangbangRanking(),
       ])
     } finally {
       loading.value = false

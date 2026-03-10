@@ -40,6 +40,12 @@ public class GroupPlanMember {
     @Column(name = "invited_at", nullable = false, updatable = false)
     private LocalDateTime invitedAt;
 
+    @Column(name = "assigned_start_chapter")
+    private Integer assignedStartChapter;
+
+    @Column(name = "assigned_end_chapter")
+    private Integer assignedEndChapter;
+
     @Builder
     public GroupPlanMember(GroupReadingPlan plan, User user, GroupInviteStatus status) {
         this.plan = plan;
@@ -53,5 +59,22 @@ public class GroupPlanMember {
 
     public void decline() {
         this.status = GroupInviteStatus.DECLINED;
+    }
+
+    public int getEffectiveStartChapter() {
+        return assignedStartChapter != null ? assignedStartChapter : plan.getStartChapter();
+    }
+
+    public int getEffectiveEndChapter() {
+        return assignedEndChapter != null ? assignedEndChapter : plan.getEndChapter();
+    }
+
+    public int getAssignedTotalChapters() {
+        return getEffectiveEndChapter() - getEffectiveStartChapter() + 1;
+    }
+
+    public void assignChapterRange(Integer start, Integer end) {
+        this.assignedStartChapter = start;
+        this.assignedEndChapter = end;
     }
 }

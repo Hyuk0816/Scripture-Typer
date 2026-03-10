@@ -106,4 +106,38 @@ public interface ProgressRepository extends JpaRepository<UserProgress, Long> {
             """)
     List<MonthlyProgressCount> countMonthlyProgress(@Param("start") LocalDateTime start,
                                                     @Param("end") LocalDateTime end);
+
+    // 특정 유저의 범위 내 완료 장 수
+    @Query("""
+            SELECT COUNT(p)
+            FROM UserProgress p
+            WHERE p.mode = :mode
+              AND p.bookName = :bookName
+              AND p.chapter >= :startChapter
+              AND p.chapter <= :endChapter
+              AND p.readCount > 0
+              AND p.user.id = :userId
+            """)
+    long countCompletedChaptersForUser(@Param("mode") ProgressMode mode,
+                                       @Param("bookName") String bookName,
+                                       @Param("startChapter") int startChapter,
+                                       @Param("endChapter") int endChapter,
+                                       @Param("userId") Long userId);
+
+    // 특정 유저의 범위 내 읽기 횟수
+    @Query("""
+            SELECT COALESCE(SUM(p.readCount), 0)
+            FROM UserProgress p
+            WHERE p.mode = :mode
+              AND p.bookName = :bookName
+              AND p.chapter >= :startChapter
+              AND p.chapter <= :endChapter
+              AND p.readCount > 0
+              AND p.user.id = :userId
+            """)
+    long sumReadCountForUser(@Param("mode") ProgressMode mode,
+                              @Param("bookName") String bookName,
+                              @Param("startChapter") int startChapter,
+                              @Param("endChapter") int endChapter,
+                              @Param("userId") Long userId);
 }

@@ -1,9 +1,16 @@
+export interface MemberChapterAssignment {
+  userId: number
+  startChapter: number
+  endChapter: number
+}
+
 export interface GroupPlanRequest {
   bookName: string
   startChapter: number
   endChapter: number
   mode: 'READING' | 'TYPING'
-  memberIds: number[]
+  memberIds?: number[]
+  memberAssignments?: MemberChapterAssignment[]
 }
 
 export interface GroupPlanResponse {
@@ -23,6 +30,9 @@ export interface GroupMemberProgressResponse {
   userName: string
   completedChapters: number
   totalReadCount: number
+  assignedStartChapter?: number | null
+  assignedEndChapter?: number | null
+  assignedTotalChapters?: number | null
 }
 
 export interface GroupPlanDetailResponse {

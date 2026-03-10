@@ -4,7 +4,6 @@ import { useRankingStore } from '@/stores/ranking'
 import RankingModeTab from '@/components/molecules/RankingModeTab.vue'
 import OverallRanking from '@/components/organisms/OverallRanking.vue'
 import AffiliationRanking from '@/components/organisms/AffiliationRanking.vue'
-import SarangbangRanking from '@/components/organisms/SarangbangRanking.vue'
 import Spinner from '@/components/atoms/Spinner.vue'
 
 const rankingStore = useRankingStore()
@@ -41,10 +40,6 @@ watch(() => rankingStore.mode, () => {
 
       <AffiliationRanking
         :data="rankingStore.affiliationRanking"
-      />
-
-      <SarangbangRanking
-        :rankings="rankingStore.sarangbangRanking"
       />
     </template>
   </div>

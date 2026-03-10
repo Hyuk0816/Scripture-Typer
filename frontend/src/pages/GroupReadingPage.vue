@@ -3,11 +3,14 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGroupStore } from '@/stores/group'
 import { useBibleStore } from '@/stores/bible'
+import { useAuthStore } from '@/stores/auth'
 import Spinner from '@/components/atoms/Spinner.vue'
 import ButtonPrimary from '@/components/atoms/ButtonPrimary.vue'
+import type { MemberChapterAssignment } from '@/types/group'
 
 const groupStore = useGroupStore()
 const bibleStore = useBibleStore()
+const authStore = useAuthStore()
 const router = useRouter()
 
 const showCreateForm = ref(false)
@@ -19,10 +22,17 @@ const selectedMemberIds = ref<number[]>([])
 const creating = ref(false)
 const error = ref('')
 
+// 멤버별 장 범위 지정
+const useChapterAssignment = ref(false)
+const memberAssignments = ref<Record<number, { start: number; end: number }>>({})
+
 const allBooks = computed(() => [...bibleStore.oldTestament, ...bibleStore.newTestament])
 const selectedBook = computed(() => allBooks.value.find((b) => b.bookName === bookName.value))
 const maxChapter = computed(() => selectedBook.value?.totalChapters ?? 1)
 const chapterOptions = computed(() => Array.from({ length: maxChapter.value }, (_, i) => i + 1))
+const rangeChapterOptions = computed(() =>
+  Array.from({ length: endChapter.value - startChapter.value + 1 }, (_, i) => startChapter.value + i),
+)
 
 watch(bookName, () => {
   startChapter.value = 1
@@ -31,6 +41,31 @@ watch(bookName, () => {
 
 watch(startChapter, (val) => {
   if (endChapter.value < val) endChapter.value = val
+})
+
+// 멤버 선택 변경 시 할당맵 동기화 (본인 포함)
+watch([selectedMemberIds, useChapterAssignment], () => {
+  if (!useChapterAssignment.value) return
+  const newMap: Record<number, { start: number; end: number }> = {}
+  for (const p of assignmentParticipants.value) {
+    newMap[p.userId] = memberAssignments.value[p.userId] || {
+      start: startChapter.value,
+      end: endChapter.value,
+    }
+  }
+  memberAssignments.value = newMap
+})
+
+// 범위 변경 시 할당맵 리셋
+watch([startChapter, endChapter], () => {
+  if (useChapterAssignment.value) {
+    for (const p of assignmentParticipants.value) {
+      memberAssignments.value[p.userId] = {
+        start: startChapter.value,
+        end: endChapter.value,
+      }
+    }
+  }
 })
 
 const activePlans = computed(() => groupStore.plans.filter((p) => p.status === 'ACTIVE'))
@@ -48,6 +83,44 @@ function toggleAllMembers() {
   } else {
     selectedMemberIds.value = groupStore.affiliationMembers.map((m) => m.userId)
   }
+}
+
+function autoDistribute() {
+  const participants = assignmentParticipants.value
+  if (participants.length === 0) return
+  const total = endChapter.value - startChapter.value + 1
+  const base = Math.floor(total / participants.length)
+  const remainder = total % participants.length
+  let current = startChapter.value
+  for (let i = 0; i < participants.length; i++) {
+    const count = base + (i < remainder ? 1 : 0)
+    memberAssignments.value[participants[i].userId] = {
+      start: current,
+      end: current + count - 1,
+    }
+    current += count
+  }
+}
+
+// 장 범위 배분 대상: 본인(생성자) + 선택된 멤버
+const assignmentParticipants = computed(() => {
+  const myId = authStore.user?.id
+  const participants: { userId: number; name: string }[] = []
+  if (myId) {
+    participants.push({ userId: myId, name: '나' })
+  }
+  for (const id of selectedMemberIds.value) {
+    const member = groupStore.affiliationMembers.find((m) => m.userId === id)
+    if (member) {
+      participants.push({ userId: member.userId, name: member.name })
+    }
+  }
+  return participants
+})
+
+function getMemberName(userId: number) {
+  if (userId === authStore.user?.id) return '나'
+  return groupStore.affiliationMembers.find((m) => m.userId === userId)?.name ?? ''
 }
 
 onMounted(() => {
@@ -73,19 +146,33 @@ async function handleCreate() {
   error.value = ''
   creating.value = true
   try {
-    const plan = await groupStore.createPlan({
+    const payload: any = {
       bookName: bookName.value,
       startChapter: startChapter.value,
       endChapter: endChapter.value,
       mode: mode.value,
-      memberIds: selectedMemberIds.value,
-    })
+    }
+
+    if (useChapterAssignment.value) {
+      const assignments: MemberChapterAssignment[] = assignmentParticipants.value.map((p) => ({
+        userId: p.userId,
+        startChapter: memberAssignments.value[p.userId]?.start ?? startChapter.value,
+        endChapter: memberAssignments.value[p.userId]?.end ?? endChapter.value,
+      }))
+      payload.memberAssignments = assignments
+    } else {
+      payload.memberIds = selectedMemberIds.value
+    }
+
+    const plan = await groupStore.createPlan(payload)
     showCreateForm.value = false
     bookName.value = ''
     startChapter.value = 1
     endChapter.value = 1
     mode.value = 'READING'
     selectedMemberIds.value = []
+    useChapterAssignment.value = false
+    memberAssignments.value = {}
     router.push(`/group/${plan.id}`)
   } catch {
     error.value = '생성에 실패했습니다. 소속이 지정되어 있는지 확인해주세요.'
@@ -273,6 +360,58 @@ function formatChapterRange(plan: { startChapter: number; endChapter: number }) 
         <p v-if="selectedMemberIds.length > 0" class="text-xs text-gray-400 mt-1">
           {{ selectedMemberIds.length }}명 선택됨
         </p>
+      </div>
+
+      <!-- Chapter assignment toggle -->
+      <div v-if="selectedMemberIds.length > 0 && bookName">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            v-model="useChapterAssignment"
+            class="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+          />
+          <span class="text-sm font-medium text-gray-700">멤버별 장 범위 지정</span>
+        </label>
+
+        <!-- Chapter assignment per member (본인 포함) -->
+        <div v-if="useChapterAssignment" class="mt-3 space-y-2">
+          <div class="flex justify-end">
+            <button
+              class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+              @click="autoDistribute"
+            >
+              자동 배분
+            </button>
+          </div>
+          <div
+            v-for="p in assignmentParticipants"
+            :key="p.userId"
+            class="flex items-center gap-2 bg-gray-50 rounded-lg p-2"
+          >
+            <span class="text-sm text-gray-700 min-w-[4rem]">{{ p.name }}</span>
+            <select
+              :value="memberAssignments[p.userId]?.start ?? startChapter"
+              @change="memberAssignments[p.userId] = { ...memberAssignments[p.userId], start: Number(($event.target as HTMLSelectElement).value) }"
+              class="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-amber-500 outline-none bg-white"
+            >
+              <option v-for="ch in rangeChapterOptions" :key="ch" :value="ch">{{ ch }}장</option>
+            </select>
+            <span class="text-gray-400 text-xs">~</span>
+            <select
+              :value="memberAssignments[p.userId]?.end ?? endChapter"
+              @change="memberAssignments[p.userId] = { ...memberAssignments[p.userId], end: Number(($event.target as HTMLSelectElement).value) }"
+              class="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-amber-500 outline-none bg-white"
+            >
+              <option
+                v-for="ch in rangeChapterOptions.filter((c) => c >= (memberAssignments[p.userId]?.start ?? startChapter))"
+                :key="ch"
+                :value="ch"
+              >
+                {{ ch }}장
+              </option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <p v-if="error" class="text-sm text-red-500">{{ error }}</p>

@@ -22,8 +22,10 @@ defineProps<{
         :key="member.userId"
         :user-name="member.userName"
         :completed-chapters="member.completedChapters"
-        :total-chapters="totalChapters"
+        :total-chapters="member.assignedTotalChapters ?? totalChapters"
         :total-read-count="member.totalReadCount"
+        :assigned-start-chapter="member.assignedStartChapter"
+        :assigned-end-chapter="member.assignedEndChapter"
       />
     </div>
   </div>

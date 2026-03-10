@@ -1,9 +1,9 @@
 package com.scriptuotyper.dto.group;
 
 import com.scriptuotyper.domain.progress.ProgressMode;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
@@ -26,6 +26,10 @@ public class GroupPlanRequest {
     @Min(1)
     private Integer endChapter;
 
-    @NotEmpty(message = "초대할 멤버를 선택해주세요")
+    // 레거시 호환용 (memberAssignments 없을 때 사용)
     private List<Long> memberIds;
+
+    // 멤버별 장 범위 지정 (우선)
+    @Valid
+    private List<MemberChapterAssignment> memberAssignments;
 }
