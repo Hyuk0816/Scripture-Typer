@@ -39,9 +39,10 @@ watch(selectedMain, (main) => {
   filteredSubs.value = affiliations.value.filter((a) => a.mainAffiliation === main)
 
   // 세부 소속이 없는 경우 (임원단, 목장, 신혼부부) 자동 선택
-  if (filteredSubs.value.length === 1 && !filteredSubs.value[0].subAffiliation) {
-    selectedAffiliationId.value = filteredSubs.value[0].id
-    emit('update:modelValue', filteredSubs.value[0].id)
+  const first = filteredSubs.value[0]
+  if (filteredSubs.value.length === 1 && first && !first.subAffiliation) {
+    selectedAffiliationId.value = first.id
+    emit('update:modelValue', first.id)
   }
 })
 
@@ -51,7 +52,7 @@ watch(selectedAffiliationId, (id) => {
 
 const needsSubSelector = ref(false)
 watch(filteredSubs, (subs) => {
-  needsSubSelector.value = subs.length > 1 || (subs.length === 1 && subs[0].subAffiliation !== null)
+  needsSubSelector.value = subs.length > 1 || (subs.length === 1 && subs[0]?.subAffiliation !== null)
 })
 </script>
 
