@@ -30,4 +30,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByAffiliationIdIn(@Param("affiliationIds") Collection<Long> affiliationIds);
 
     long countByAffiliationId(Long affiliationId);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.affiliation")
+    List<User> findAllWithAffiliation();
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.affiliation WHERE u.status = :status")
+    List<User> findByStatusWithAffiliation(@Param("status") UserStatus status);
 }
