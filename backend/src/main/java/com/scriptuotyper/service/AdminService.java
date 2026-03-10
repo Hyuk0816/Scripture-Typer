@@ -39,14 +39,14 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public List<UserListResponse> getUsersByStatus(UserStatus status) {
-        return userRepository.findByStatus(status).stream()
+        return userRepository.findByStatusWithAffiliation(status).stream()
                 .map(UserListResponse::from)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<UserListResponse> getAllUsers() {
-        return userRepository.findAll().stream()
+        return userRepository.findAllWithAffiliation().stream()
                 .map(UserListResponse::from)
                 .toList();
     }
