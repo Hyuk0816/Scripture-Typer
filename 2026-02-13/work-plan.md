@@ -215,6 +215,40 @@ docs: API 명세 문서 작성
 | 10-6 | 캐시 무효화 전략 | TTL, 장 완료 시 즉시 DB 반영 | 장 완료 = 확정 이벤트, 즉시 DB 기록 |
 | 10-7 | 장애 대응: Redis 다운 시 fallback | DB 직접 접근 fallback | CircuitBreaker 패턴 고려 |
 
+### Phase 10-A: API 응답 속도 개선 (이슈 #3)
+> 배경: 네트워크 탭 기준 페이지 로딩 ~9초. Cloudflare Tunnel Free 플랜 한계(한국→LAX 라우팅, 요청당 ~900ms 오버헤드) + 모든 응답에 캐시 없음. 서버/브라우저 캐싱으로 요청 횟수 및 DB 쿼리 최소화.
+
+| Step | Task Description | Expected Deliverable | Notes |
+|:---:|:---|:---|:---|
+| 10A-1 | Spring Cache 인프라 구성 | `CacheConfig.java` + `spring-boot-starter-cache` | `@EnableCaching`, `RedisCacheManager`, `RedisSerializer.json()` |
+| 10A-2 | Bible API 캐싱 | `BibleService` `@Cacheable` + `BibleController` `Cache-Control` 헤더 | bible:books(24h), bible:chapter(24h), 브라우저 `max-age=86400` |
+| 10A-3 | 랭킹 API 캐싱 | `RankingService` `@Cacheable` + `ProgressCacheService` `@CacheEvict` | ranking:top(5분), 점수 변동 시 무효화 |
+| 10A-4 | menu-access 비동기 처리 | `LogService` `@Async` + `@EnableAsync` | DB 쓰기를 비동기로 전환, 응답 블로킹 제거 |
+| 10A-5 | 통독 하이라이트 지연 수정 | `reading.ts` `saveProgress()` 낙관적 업데이트 | API 호출 전 `lastReadVerse` 먼저 갱신, 실패 시 롤백 |
+| 10A-6 | 게시판 API 캐싱 | `BoardService` `@Cacheable`/`@CacheEvict` | board:list(5분), board:detail(10분), BIBLE_QUESTION 캐시 제외 |
+
+#### 캐시 키 전략 요약
+| 캐시 이름 | TTL | 키 패턴 | 무효화 시점 |
+|-----------|-----|---------|------------|
+| `bible:books` | 24시간 | 단일 키 | 정적 데이터, 무효화 불필요 |
+| `bible:chapter` | 24시간 | `{bookName}:{chapter}` | 정적 데이터, 무효화 불필요 |
+| `ranking:top` | 5분 | `{limit}` | `incrementTypingRanking()` 시 전체 무효화 |
+| `board:list` | 5분 | `{postType}:{page}:{size}` | 글 생성/수정/삭제 시 전체 무효화 |
+| `board:detail` | 10분 | `{boardId}` | 글 수정/삭제, 댓글 CRUD 시 해당 키 무효화 |
+
+#### PR 이력
+| PR | 브랜치 | 내용 | 상태 |
+|----|--------|------|------|
+| #24 | `feat/api-caching` | Bible/랭킹 캐싱 + 비동기 로깅 | Merged |
+| #25 | `fix/reading-highlight-delay` | 통독 하이라이트 낙관적 업데이트 | Merged |
+| #26 | `feat/board-caching` | 게시판 캐싱 | Open |
+
+#### 성능 분석 결과
+- Cloudflare Tunnel Free 플랜: 한국 ISP(KT) → LAX(미국) 라우팅 (ICN 미지원)
+- 터널 오버헤드: 요청당 ~900ms (로컬 58ms vs 터널 960ms)
+- 홈서버 리소스: RAM 5.8Gi 가용, 인터넷 445Mbps — 병목 아님
+- 근본 해결: 포트포워딩 (Cloudflare 우회) 또는 브라우저 캐싱으로 요청 자체 제거
+
 ### Phase 11: 통합 및 마무리
 | Step | Task Description | Expected Deliverable | Notes |
 |:---:|:---|:---|:---|
@@ -238,7 +272,8 @@ docs: API 명세 문서 작성
 - [ ] 대시보드 및 마이페이지
 - [ ] 게시판 (역할 기반 접근 제한)
 - [ ] Gemini 채팅 (일일 제한, SSE 스트리밍)
-- [ ] Redis 캐싱 (진도 추적 최적화)
+- [x] Redis 캐싱 (진도 추적 최적화)
+- [x] API 응답 속도 개선 (Bible/랭킹/게시판 캐싱, 비동기 로깅, 브라우저 Cache-Control)
 - [ ] 데이터 마이그레이션 스크립트
 - [ ] 통합 테스트 및 보안 검증
 

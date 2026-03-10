@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
+import { useGroupStore } from '@/stores/group'
 import { useRouter } from 'vue-router'
 import TestamentTabs from '@/components/molecules/TestamentTabs.vue'
 import BookList from './BookList.vue'
 
 const uiStore = useUiStore()
 const authStore = useAuthStore()
+const groupStore = useGroupStore()
 const router = useRouter()
 
 function navigateAndClose(path: string) {
@@ -42,6 +44,24 @@ async function handleLogout() {
         class="w-full text-left text-sm text-gray-600 hover:text-amber-700 hover:bg-amber-50 px-3 py-2 rounded-lg transition-colors"
       >
         마이페이지
+      </button>
+      <button
+        @click="navigateAndClose('/group')"
+        class="relative w-full text-left text-sm text-gray-600 hover:text-amber-700 hover:bg-amber-50 px-3 py-2 rounded-lg transition-colors"
+      >
+        그룹
+        <span
+          v-if="groupStore.pendingInviteCount > 0"
+          class="absolute top-1.5 ml-1 inline-flex min-w-[18px] h-[18px] items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full px-1"
+        >
+          {{ groupStore.pendingInviteCount > 99 ? '99+' : groupStore.pendingInviteCount }}
+        </span>
+      </button>
+      <button
+        @click="navigateAndClose('/ranking')"
+        class="w-full text-left text-sm text-gray-600 hover:text-amber-700 hover:bg-amber-50 px-3 py-2 rounded-lg transition-colors"
+      >
+        랭킹
       </button>
       <button
         @click="navigateAndClose('/board')"

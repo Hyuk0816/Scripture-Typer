@@ -1,5 +1,6 @@
 package com.scriptuotyper.domain.user;
 
+import com.scriptuotyper.domain.affiliation.Affiliation;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -45,6 +46,10 @@ public class User {
     @Column(nullable = false)
     private UserStatus status = UserStatus.PENDING;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "affiliation_id")
+    private Affiliation affiliation;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -68,5 +73,9 @@ public class User {
 
     public void changeStatus(UserStatus status) {
         this.status = status;
+    }
+
+    public void changeAffiliation(Affiliation affiliation) {
+        this.affiliation = affiliation;
     }
 }

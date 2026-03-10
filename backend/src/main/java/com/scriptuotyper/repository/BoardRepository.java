@@ -6,6 +6,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.Optional;
 
 public interface BoardRepository extends JpaRepository<Board, Long> {
 
@@ -14,6 +17,15 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     Page<Board> findByPostTypeOrderByCreatedAtAsc(PostType postType, Pageable pageable);
 
     Page<Board> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    @Query("""
+            SELECT b FROM Board b
+            LEFT JOIN FETCH b.user
+            LEFT JOIN FETCH b.replies r
+            LEFT JOIN FETCH r.user
+            WHERE b.id = :id
+            """)
+    Optional<Board> findByIdWithDetails(@Param("id") Long id);
 
     @Query(value = """
             SELECT * FROM board

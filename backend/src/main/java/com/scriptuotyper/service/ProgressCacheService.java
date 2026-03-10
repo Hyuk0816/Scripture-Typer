@@ -149,6 +149,19 @@ public class ProgressCacheService {
     }
 
     /**
+     * 모드별 + 소속별 랭킹 dual-write
+     */
+    @CacheEvict(value = "ranking:top", allEntries = true)
+    public void incrementRanking(Long userId, String mode, Long affiliationId) {
+        String globalKey = "ranking:" + mode;
+        redisTemplate.opsForZSet().incrementScore(globalKey, String.valueOf(userId), 1.0);
+        if (affiliationId != null) {
+            String affKey = "ranking:" + mode + ":aff:" + affiliationId;
+            redisTemplate.opsForZSet().incrementScore(affKey, String.valueOf(userId), 1.0);
+        }
+    }
+
+    /**
      * 유저 비활성화 시 랭킹 ZSET에서 제거
      */
     public void removeTypingRanking(Long userId) {

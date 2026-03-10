@@ -1,9 +1,11 @@
 package com.scriptuotyper.service;
 
 import com.scriptuotyper.common.exception.user.UserNotFoundException;
+import com.scriptuotyper.domain.affiliation.Affiliation;
 import com.scriptuotyper.domain.user.User;
 import com.scriptuotyper.domain.user.UserStatus;
 import com.scriptuotyper.dto.admin.UserListResponse;
+import com.scriptuotyper.repository.AffiliationRepository;
 import com.scriptuotyper.repository.UserRepository;
 import com.scriptuotyper.service.ProgressCacheService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import java.util.List;
 public class AdminService {
 
     private final UserRepository userRepository;
+    private final AffiliationRepository affiliationRepository;
     private final ProgressCacheService progressCacheService;
 
     @Transactional
@@ -46,5 +49,18 @@ public class AdminService {
         return userRepository.findAll().stream()
                 .map(UserListResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public void updateUserAffiliation(Long userId, Long affiliationId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+        if (affiliationId == null) {
+            user.changeAffiliation(null);
+        } else {
+            Affiliation affiliation = affiliationRepository.findById(affiliationId)
+                    .orElseThrow(() -> new IllegalArgumentException("소속을 찾을 수 없습니다"));
+            user.changeAffiliation(affiliation);
+        }
     }
 }

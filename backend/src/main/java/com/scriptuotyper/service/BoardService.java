@@ -173,7 +173,7 @@ public class BoardService {
     }
 
     private Board findBoard(Long boardId) {
-        return boardRepository.findById(boardId)
+        return boardRepository.findByIdWithDetails(boardId)
                 .orElseThrow(BoardNotFoundException::new);
     }
 

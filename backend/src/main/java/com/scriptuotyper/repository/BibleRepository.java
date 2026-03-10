@@ -16,6 +16,9 @@ public interface BibleRepository extends JpaRepository<Bible, Long> {
 
     int countByBookNameAndChapter(String bookName, int chapter);
 
+    @Query("SELECT MAX(b.chapter) FROM Bible b WHERE b.bookName = :bookName")
+    Integer findMaxChapterByBookName(@org.springframework.data.repository.query.Param("bookName") String bookName);
+
     interface BookProjection {
         String getBookName();
         Integer getBookOrder();
