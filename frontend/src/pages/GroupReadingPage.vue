@@ -94,7 +94,7 @@ function autoDistribute() {
   let current = startChapter.value
   for (let i = 0; i < participants.length; i++) {
     const count = base + (i < remainder ? 1 : 0)
-    memberAssignments.value[participants[i].userId] = {
+    memberAssignments.value[participants[i]!.userId] = {
       start: current,
       end: current + count - 1,
     }
@@ -391,7 +391,7 @@ function formatChapterRange(plan: { startChapter: number; endChapter: number }) 
             <span class="text-sm text-gray-700 min-w-[4rem]">{{ p.name }}</span>
             <select
               :value="memberAssignments[p.userId]?.start ?? startChapter"
-              @change="memberAssignments[p.userId] = { ...memberAssignments[p.userId], start: Number(($event.target as HTMLSelectElement).value) }"
+              @change="memberAssignments[p.userId] = { start: Number(($event.target as HTMLSelectElement).value), end: memberAssignments[p.userId]?.end ?? endChapter }"
               class="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-amber-500 outline-none bg-white"
             >
               <option v-for="ch in rangeChapterOptions" :key="ch" :value="ch">{{ ch }}장</option>
@@ -399,7 +399,7 @@ function formatChapterRange(plan: { startChapter: number; endChapter: number }) 
             <span class="text-gray-400 text-xs">~</span>
             <select
               :value="memberAssignments[p.userId]?.end ?? endChapter"
-              @change="memberAssignments[p.userId] = { ...memberAssignments[p.userId], end: Number(($event.target as HTMLSelectElement).value) }"
+              @change="memberAssignments[p.userId] = { start: memberAssignments[p.userId]?.start ?? startChapter, end: Number(($event.target as HTMLSelectElement).value) }"
               class="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-amber-500 outline-none bg-white"
             >
               <option
