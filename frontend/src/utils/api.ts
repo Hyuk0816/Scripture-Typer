@@ -29,6 +29,12 @@ import type {
 } from '@/types/board'
 import type { ChatSession, ChatUsage } from '@/types/chat'
 import type {
+  UserProfileResponse,
+  ChangePasswordRequest,
+  VerifyIdentityRequest,
+  ResetPasswordRequest,
+} from '@/types/user'
+import type {
   DailyLoginStatResponse,
   DailyProgressStatResponse,
   DailyChatStatResponse,
@@ -171,6 +177,23 @@ export const authApi = {
   refresh(data: RefreshRequest) {
     return api.post<TokenResponse>('/auth/refresh', data)
   },
+  verifyIdentity(data: VerifyIdentityRequest) {
+    return api.post<void>('/auth/verify-identity', data)
+  },
+  resetPassword(data: ResetPasswordRequest) {
+    return api.post<void>('/auth/reset-password', data)
+  },
+}
+
+// --- User API ---
+
+export const userApi = {
+  getMyProfile() {
+    return api.get<UserProfileResponse>('/user/me')
+  },
+  changePassword(data: ChangePasswordRequest) {
+    return api.put<void>('/user/me/password', data)
+  },
 }
 
 // --- Affiliation API ---
@@ -269,6 +292,9 @@ export const rankingApi = {
   },
   getMyAffiliationRanking(mode: RankingMode, limit?: number) {
     return api.get<AffiliationRankingResponse>('/ranking/my-affiliation', { params: { mode, limit } })
+  },
+  getMonthlyRanking(mode: RankingMode, year: number, month: number, limit?: number) {
+    return api.get<RankingEntryResponse[]>('/ranking/monthly', { params: { mode, year, month, limit } })
   },
   getSarangbangRanking(mode: RankingMode) {
     return api.get<GroupRankingResponse[]>('/ranking/sarangbang', { params: { mode } })

@@ -22,6 +22,7 @@ import org.springframework.data.redis.core.ZSetOperations.TypedTuple;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -103,11 +104,12 @@ public class RankingService {
                 .orElseThrow(UserNotFoundException::new);
 
         if (user.getAffiliation() == null) {
-            return new AffiliationRankingResponse("미지정", 0, 0, List.of());
+            return new AffiliationRankingResponse("미지정", null, 0, 0, List.of());
         }
 
         Long affiliationId = user.getAffiliation().getId();
         String affiliationName = user.getAffiliation().getDisplayName();
+        String mainAffiliationName = user.getAffiliation().getMainAffiliation().name();
 
         // DB aggregate query (cached)
         List<UserTypingCount> counts = progressRepository.sumReadCountByAffiliationAndMode(affiliationId, mode);
@@ -135,7 +137,7 @@ public class RankingService {
             if (rankings.size() >= limit) break;
         }
 
-        return new AffiliationRankingResponse(affiliationName, myRank, myChapters, rankings);
+        return new AffiliationRankingResponse(affiliationName, mainAffiliationName, myRank, myChapters, rankings);
     }
 
     /**
@@ -209,6 +211,45 @@ public class RankingService {
         }
 
         return result;
+    }
+
+    /**
+     * 월간 랭킹
+     */
+    @Cacheable(value = "ranking:monthly", key = "#mode + ':' + #year + ':' + #month")
+    public List<RankingEntryResponse> getMonthlyRanking(ProgressMode mode, int year, int month, int limit) {
+        LocalDateTime start = LocalDateTime.of(year, month, 1, 0, 0);
+        LocalDateTime end = start.plusMonths(1);
+        List<UserTypingCount> counts = progressRepository.countCompletedChaptersByMonth(mode, start, end);
+
+        counts.sort((a, b) -> Long.compare(b.totalCount(), a.totalCount()));
+
+        List<Long> userIds = counts.stream().map(UserTypingCount::userId).toList();
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
+        List<RankingEntryResponse> result = new ArrayList<>();
+        int rank = 1;
+        for (UserTypingCount count : counts) {
+            User u = userMap.get(count.userId());
+            String name = u != null ? u.getName() : "알 수 없음";
+            result.add(new RankingEntryResponse(rank++, count.userId(), name, count.totalCount().intValue()));
+            if (result.size() >= limit) break;
+        }
+
+        return result;
+    }
+
+    /**
+     * 사랑방 간 랭킹 (접근제어 — 사랑방 소속만 조회 가능)
+     */
+    public List<GroupRankingResponse> getSarangbangRankingForUser(Long userId, ProgressMode mode) {
+        User user = userRepository.findByIdWithAffiliation(userId)
+                .orElseThrow(UserNotFoundException::new);
+        if (user.getAffiliation() == null || user.getAffiliation().getMainAffiliation() != MainAffiliation.SARANGBANG) {
+            return List.of();
+        }
+        return getSarangbangRanking(mode);
     }
 
     // --- Private helpers ---

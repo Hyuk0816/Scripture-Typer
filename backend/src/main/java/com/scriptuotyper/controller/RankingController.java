@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.YearMonth;
 import java.util.List;
 
 @RestController
@@ -54,13 +55,33 @@ public class RankingController {
     }
 
     /**
-     * 사랑방 간 랭킹 (그룹 집계)
+     * 월간 랭킹
+     */
+    @GetMapping("/monthly")
+    public List<RankingEntryResponse> getMonthlyRanking(
+            @RequestParam ProgressMode mode,
+            @RequestParam int year,
+            @RequestParam int month,
+            @RequestParam(defaultValue = "20") int limit
+    ) {
+        YearMonth requested = YearMonth.of(year, month);
+        YearMonth now = YearMonth.now();
+        if (!requested.equals(now) && !requested.equals(now.minusMonths(1))) {
+            throw new IllegalArgumentException("Only current or previous month is allowed");
+        }
+        return rankingService.getMonthlyRanking(mode, year, month, Math.min(limit, 50));
+    }
+
+    /**
+     * 사랑방 간 랭킹 (그룹 집계, 사랑방 소속만 조회 가능)
      */
     @GetMapping("/sarangbang")
     public List<GroupRankingResponse> getSarangbangRanking(
+            Authentication authentication,
             @RequestParam ProgressMode mode
     ) {
-        return rankingService.getSarangbangRanking(mode);
+        Long userId = (Long) authentication.getPrincipal();
+        return rankingService.getSarangbangRankingForUser(userId, mode);
     }
 
     /**

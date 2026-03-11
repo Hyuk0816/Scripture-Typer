@@ -44,6 +44,7 @@ export interface RankingEntryResponse {
 
 export interface AffiliationRankingResponse {
   affiliationName: string
+  mainAffiliation: string | null
   myRank: number
   myCompletedChapters: number
   rankings: RankingEntryResponse[]

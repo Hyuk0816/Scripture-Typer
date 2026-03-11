@@ -11,7 +11,7 @@ const medals = ['🥇', '🥈', '🥉']
 
 <template>
   <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-    <h3 class="text-base font-bold text-gray-800 mb-4">전체 랭킹</h3>
+    <h3 class="text-base font-bold text-gray-800 mb-4">개인 랭킹</h3>
 
     <div v-if="loading" class="text-center py-8 text-gray-400">불러오는 중...</div>
     <div v-else-if="rankings.length === 0" class="text-center py-8 text-gray-400">아직 랭킹 데이터가 없습니다</div>
