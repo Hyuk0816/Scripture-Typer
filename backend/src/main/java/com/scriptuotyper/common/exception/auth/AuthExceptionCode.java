@@ -13,7 +13,8 @@ public enum AuthExceptionCode implements ExceptionCode {
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다", "AUTH_002"),
     ACCOUNT_NOT_APPROVED(HttpStatus.FORBIDDEN, "승인 대기 중인 계정입니다. 관리자 승인 후 로그인 가능합니다", "AUTH_003"),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다", "AUTH_004"),
-    EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "만료된 토큰입니다", "AUTH_005");
+    EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "만료된 토큰입니다", "AUTH_005"),
+    USER_NOT_FOUND_BY_IDENTITY(HttpStatus.NOT_FOUND, "일치하는 사용자 정보를 찾을 수 없습니다", "AUTH_006");
 
     private final HttpStatus httpStatus;
     private final String message;

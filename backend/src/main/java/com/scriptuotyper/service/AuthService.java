@@ -4,14 +4,18 @@ import com.scriptuotyper.common.exception.auth.AccountNotApprovedException;
 import com.scriptuotyper.common.exception.auth.DuplicateEmailException;
 import com.scriptuotyper.common.exception.auth.InvalidCredentialsException;
 import com.scriptuotyper.common.exception.auth.InvalidTokenException;
+import com.scriptuotyper.common.exception.auth.UserIdentityNotFoundException;
+import com.scriptuotyper.common.exception.user.PasswordMismatchException;
 import com.scriptuotyper.common.exception.user.UserNotFoundException;
 import com.scriptuotyper.domain.affiliation.Affiliation;
 import com.scriptuotyper.domain.user.User;
 import com.scriptuotyper.domain.user.UserLoginLog;
 import com.scriptuotyper.domain.user.UserStatus;
 import com.scriptuotyper.dto.auth.LoginRequest;
+import com.scriptuotyper.dto.auth.ResetPasswordRequest;
 import com.scriptuotyper.dto.auth.SignupRequest;
 import com.scriptuotyper.dto.auth.TokenResponse;
+import com.scriptuotyper.dto.auth.VerifyIdentityRequest;
 import com.scriptuotyper.repository.AffiliationRepository;
 import com.scriptuotyper.repository.UserLoginLogRepository;
 import com.scriptuotyper.repository.UserRepository;
@@ -21,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -108,5 +114,35 @@ public class AuthService {
         refreshTokenService.save(userId, newRefreshToken);
 
         return new TokenResponse(newAccessToken, newRefreshToken);
+    }
+
+    @Transactional(readOnly = true)
+    public void verifyIdentity(VerifyIdentityRequest request) {
+        User user = userRepository.findByEmailAndNameAndTtorae(
+                        request.getEmail(), request.getName(), request.getTtorae())
+                .orElseThrow(UserIdentityNotFoundException::new);
+
+        Long userAffId = user.getAffiliation() != null ? user.getAffiliation().getId() : null;
+        if (!Objects.equals(userAffId, request.getAffiliationId())) {
+            throw new UserIdentityNotFoundException();
+        }
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getNewPasswordConfirm())) {
+            throw new PasswordMismatchException();
+        }
+
+        User user = userRepository.findByEmailAndNameAndTtorae(
+                        request.getEmail(), request.getName(), request.getTtorae())
+                .orElseThrow(UserIdentityNotFoundException::new);
+
+        Long userAffId = user.getAffiliation() != null ? user.getAffiliation().getId() : null;
+        if (!Objects.equals(userAffId, request.getAffiliationId())) {
+            throw new UserIdentityNotFoundException();
+        }
+
+        user.changePassword(passwordEncoder.encode(request.getNewPassword()));
     }
 }

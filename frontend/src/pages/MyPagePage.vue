@@ -1,18 +1,47 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProgressStore } from '@/stores/progress'
+import { userApi } from '@/utils/api'
 import Spinner from '@/components/atoms/Spinner.vue'
+import UserProfileCard from '@/components/organisms/UserProfileCard.vue'
+import PasswordChangeModal from '@/components/organisms/PasswordChangeModal.vue'
 import type { ReadingProgressResponse, TypingProgressResponse } from '@/types/progress'
+import type { UserProfileResponse } from '@/types/user'
 
 const router = useRouter()
 const progressStore = useProgressStore()
 
+const PAGE_SIZE = 10
+
 type TabId = 'reading' | 'typing'
 const activeTab = ref<TabId>('reading')
 
-onMounted(() => {
+const profile = ref<UserProfileResponse | null>(null)
+const showPasswordModal = ref(false)
+
+// Pagination state per section
+const readingInProgressPage = ref(1)
+const readingCompletedPage = ref(1)
+const typingInProgressPage = ref(1)
+const typingCompletedPage = ref(1)
+
+// Reset pages when tab changes
+watch(activeTab, () => {
+  readingInProgressPage.value = 1
+  readingCompletedPage.value = 1
+  typingInProgressPage.value = 1
+  typingCompletedPage.value = 1
+})
+
+onMounted(async () => {
   progressStore.fetchAll()
+  try {
+    const { data } = await userApi.getMyProfile()
+    profile.value = data
+  } catch {
+    // silent
+  }
 })
 
 // --- Reading tab data ---
@@ -31,6 +60,21 @@ const typingCompleted = computed(() =>
   progressStore.allTyping.filter((p) => p.readCount >= 1)
 )
 
+// --- Pagination helpers ---
+function totalPages(items: { length: number }) {
+  return Math.max(1, Math.ceil(items.length / PAGE_SIZE))
+}
+
+function paginate<T>(items: T[], page: number): T[] {
+  const start = (page - 1) * PAGE_SIZE
+  return items.slice(start, start + PAGE_SIZE)
+}
+
+const pagedReadingInProgress = computed(() => paginate(readingInProgress.value, readingInProgressPage.value))
+const pagedReadingCompleted = computed(() => paginate(readingCompleted.value, readingCompletedPage.value))
+const pagedTypingInProgress = computed(() => paginate(typingInProgress.value, typingInProgressPage.value))
+const pagedTypingCompleted = computed(() => paginate(typingCompleted.value, typingCompletedPage.value))
+
 function navigateReading(p: ReadingProgressResponse) {
   router.push(`/reading/${p.bookName}/${p.chapter}`)
 }
@@ -48,6 +92,16 @@ function navigateTyping(p: TypingProgressResponse, restart = false) {
       <h1 class="text-2xl font-bold text-gray-800">마이페이지</h1>
       <p class="text-sm text-gray-500 mt-1">나의 통독/필사 현황을 확인하세요</p>
     </div>
+
+    <!-- Profile Card -->
+    <UserProfileCard
+      v-if="profile"
+      :profile="profile"
+      @change-password="showPasswordModal = true"
+    />
+
+    <!-- Password Change Modal -->
+    <PasswordChangeModal v-model="showPasswordModal" />
 
     <!-- Tab Bar -->
     <div class="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6">
@@ -106,7 +160,7 @@ function navigateTyping(p: TypingProgressResponse, restart = false) {
           </h2>
           <div class="space-y-2">
             <button
-              v-for="p in readingInProgress"
+              v-for="p in pagedReadingInProgress"
               :key="`${p.bookName}-${p.chapter}`"
               @click="navigateReading(p)"
               class="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-left hover:shadow-md hover:border-gray-200 transition-all group"
@@ -122,6 +176,26 @@ function navigateTyping(p: TypingProgressResponse, restart = false) {
               </div>
             </button>
           </div>
+          <!-- Pagination -->
+          <div v-if="totalPages(readingInProgress) > 1" class="flex items-center justify-center gap-2 mt-4">
+            <button
+              @click="readingInProgressPage--"
+              :disabled="readingInProgressPage <= 1"
+              class="px-3 py-1.5 text-xs rounded-lg border transition-colors"
+              :class="readingInProgressPage <= 1 ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+            >
+              이전
+            </button>
+            <span class="text-xs text-gray-500">{{ readingInProgressPage }} / {{ totalPages(readingInProgress) }}</span>
+            <button
+              @click="readingInProgressPage++"
+              :disabled="readingInProgressPage >= totalPages(readingInProgress)"
+              class="px-3 py-1.5 text-xs rounded-lg border transition-colors"
+              :class="readingInProgressPage >= totalPages(readingInProgress) ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+            >
+              다음
+            </button>
+          </div>
         </section>
 
         <!-- 통독완료 -->
@@ -132,7 +206,7 @@ function navigateTyping(p: TypingProgressResponse, restart = false) {
           </h2>
           <div class="space-y-2">
             <button
-              v-for="p in readingCompleted"
+              v-for="p in pagedReadingCompleted"
               :key="`${p.bookName}-${p.chapter}`"
               @click="navigateReading(p)"
               class="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-left hover:shadow-md hover:border-gray-200 transition-all group"
@@ -148,6 +222,26 @@ function navigateTyping(p: TypingProgressResponse, restart = false) {
               <div class="mt-2 text-xs text-gray-400 group-hover:text-green-600 transition-colors">
                 말씀 읽기 &rarr;
               </div>
+            </button>
+          </div>
+          <!-- Pagination -->
+          <div v-if="totalPages(readingCompleted) > 1" class="flex items-center justify-center gap-2 mt-4">
+            <button
+              @click="readingCompletedPage--"
+              :disabled="readingCompletedPage <= 1"
+              class="px-3 py-1.5 text-xs rounded-lg border transition-colors"
+              :class="readingCompletedPage <= 1 ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+            >
+              이전
+            </button>
+            <span class="text-xs text-gray-500">{{ readingCompletedPage }} / {{ totalPages(readingCompleted) }}</span>
+            <button
+              @click="readingCompletedPage++"
+              :disabled="readingCompletedPage >= totalPages(readingCompleted)"
+              class="px-3 py-1.5 text-xs rounded-lg border transition-colors"
+              :class="readingCompletedPage >= totalPages(readingCompleted) ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+            >
+              다음
             </button>
           </div>
         </section>
@@ -186,7 +280,7 @@ function navigateTyping(p: TypingProgressResponse, restart = false) {
           </h2>
           <div class="space-y-2">
             <button
-              v-for="p in typingInProgress"
+              v-for="p in pagedTypingInProgress"
               :key="`${p.bookName}-${p.chapter}`"
               @click="navigateTyping(p)"
               class="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-left hover:shadow-md hover:border-gray-200 transition-all group"
@@ -211,6 +305,26 @@ function navigateTyping(p: TypingProgressResponse, restart = false) {
               </div>
             </button>
           </div>
+          <!-- Pagination -->
+          <div v-if="totalPages(typingInProgress) > 1" class="flex items-center justify-center gap-2 mt-4">
+            <button
+              @click="typingInProgressPage--"
+              :disabled="typingInProgressPage <= 1"
+              class="px-3 py-1.5 text-xs rounded-lg border transition-colors"
+              :class="typingInProgressPage <= 1 ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+            >
+              이전
+            </button>
+            <span class="text-xs text-gray-500">{{ typingInProgressPage }} / {{ totalPages(typingInProgress) }}</span>
+            <button
+              @click="typingInProgressPage++"
+              :disabled="typingInProgressPage >= totalPages(typingInProgress)"
+              class="px-3 py-1.5 text-xs rounded-lg border transition-colors"
+              :class="typingInProgressPage >= totalPages(typingInProgress) ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+            >
+              다음
+            </button>
+          </div>
         </section>
 
         <!-- 필사완료 -->
@@ -221,7 +335,7 @@ function navigateTyping(p: TypingProgressResponse, restart = false) {
           </h2>
           <div class="space-y-2">
             <button
-              v-for="p in typingCompleted"
+              v-for="p in pagedTypingCompleted"
               :key="`${p.bookName}-${p.chapter}`"
               @click="navigateTyping(p, true)"
               class="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-left hover:shadow-md hover:border-gray-200 transition-all group"
@@ -243,6 +357,26 @@ function navigateTyping(p: TypingProgressResponse, restart = false) {
               <div class="mt-2 text-xs text-gray-400 group-hover:text-green-600 transition-colors">
                 다시 필사하기 &rarr;
               </div>
+            </button>
+          </div>
+          <!-- Pagination -->
+          <div v-if="totalPages(typingCompleted) > 1" class="flex items-center justify-center gap-2 mt-4">
+            <button
+              @click="typingCompletedPage--"
+              :disabled="typingCompletedPage <= 1"
+              class="px-3 py-1.5 text-xs rounded-lg border transition-colors"
+              :class="typingCompletedPage <= 1 ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+            >
+              이전
+            </button>
+            <span class="text-xs text-gray-500">{{ typingCompletedPage }} / {{ totalPages(typingCompleted) }}</span>
+            <button
+              @click="typingCompletedPage++"
+              :disabled="typingCompletedPage >= totalPages(typingCompleted)"
+              class="px-3 py-1.5 text-xs rounded-lg border transition-colors"
+              :class="typingCompletedPage >= totalPages(typingCompleted) ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+            >
+              다음
             </button>
           </div>
         </section>

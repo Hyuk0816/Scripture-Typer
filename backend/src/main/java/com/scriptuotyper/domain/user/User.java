@@ -78,4 +78,8 @@ public class User {
     public void changeAffiliation(Affiliation affiliation) {
         this.affiliation = affiliation;
     }
+
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
 }
