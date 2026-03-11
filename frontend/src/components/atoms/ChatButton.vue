@@ -5,14 +5,18 @@ const chatStore = useChatStore()
 </script>
 
 <template>
-  <button
-    v-if="!chatStore.isOpen"
-    @click="chatStore.toggleChat()"
-    class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
-    aria-label="말씀 도우미 열기"
-  >
-    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-    </svg>
-  </button>
+  <div v-if="!chatStore.isOpen" class="fixed bottom-20 sm:bottom-6 right-6 z-50 group">
+    <div class="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+      AI 채팅
+    </div>
+    <button
+      @click="chatStore.toggleChat()"
+      class="w-14 h-14 rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+      aria-label="AI 채팅 열기"
+    >
+      <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 4.5 8.25v9a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h1.5v1.5h-1.5V6.75Zm4.5 0h1.5v1.5h-1.5V6.75ZM9 12.75h6v3H9v-3Z" />
+      </svg>
+    </button>
+  </div>
 </template>
