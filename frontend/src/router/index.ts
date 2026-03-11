@@ -94,6 +94,12 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
+      path: '/admin/affiliations',
+      name: 'admin-affiliations',
+      component: () => import('@/pages/AdminAffiliationsPage.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
       path: '/admin/stats',
       name: 'admin-stats',
       component: () => import('@/pages/AdminStatisticsPage.vue'),
