@@ -47,7 +47,7 @@ public class User {
     private UserStatus status = UserStatus.PENDING;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "affiliation_id")
+    @JoinColumn(name = "affiliation_id", nullable = false)
     private Affiliation affiliation;
 
     @CreatedDate

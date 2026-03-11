@@ -8,7 +8,7 @@ export interface SignupRequest {
   phone: string
   email: string
   password: string
-  affiliationId?: number | null
+  affiliationId: number | null
 }
 
 export interface LoginRequest {

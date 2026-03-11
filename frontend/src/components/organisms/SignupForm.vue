@@ -30,6 +30,7 @@ const errors = reactive({
   email: '',
   password: '',
   passwordConfirm: '',
+  affiliationId: '',
 })
 
 const loading = ref(false)
@@ -62,6 +63,11 @@ function validate(): boolean {
     valid = false
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
     errors.email = '올바른 이메일 형식이 아닙니다'
+    valid = false
+  }
+
+  if (!affiliationId.value) {
+    errors.affiliationId = '소속을 선택해주세요'
     valid = false
   }
 
@@ -162,6 +168,7 @@ async function handleSubmit() {
     />
 
     <AffiliationSelector v-model="affiliationId" />
+    <p v-if="errors.affiliationId" class="text-red-500 text-xs mt-1">{{ errors.affiliationId }}</p>
 
     <FormField
       id="password"
