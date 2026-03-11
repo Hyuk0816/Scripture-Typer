@@ -88,6 +88,12 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('@/pages/ResetPasswordPage.vue'),
+      meta: { guest: true },
+    },
+    {
       path: '/admin/users',
       name: 'admin-users',
       component: () => import('@/pages/AdminUsersPage.vue'),

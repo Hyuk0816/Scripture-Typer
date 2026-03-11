@@ -2,8 +2,10 @@ package com.scriptuotyper.controller;
 
 import com.scriptuotyper.dto.auth.LoginRequest;
 import com.scriptuotyper.dto.auth.RefreshRequest;
+import com.scriptuotyper.dto.auth.ResetPasswordRequest;
 import com.scriptuotyper.dto.auth.SignupRequest;
 import com.scriptuotyper.dto.auth.TokenResponse;
+import com.scriptuotyper.dto.auth.VerifyIdentityRequest;
 import com.scriptuotyper.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -47,5 +49,17 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<TokenResponse> refresh(@Valid @RequestBody RefreshRequest request) {
         return ResponseEntity.ok(authService.refresh(request.getRefreshToken()));
+    }
+
+    @PostMapping("/verify-identity")
+    @ResponseStatus(HttpStatus.OK)
+    public void verifyIdentity(@Valid @RequestBody VerifyIdentityRequest request) {
+        authService.verifyIdentity(request);
+    }
+
+    @PostMapping("/reset-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
     }
 }
