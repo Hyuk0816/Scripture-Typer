@@ -26,7 +26,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -53,10 +52,9 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .build();
 
-        if (request.getAffiliationId() != null) {
-            affiliationRepository.findById(request.getAffiliationId())
-                    .ifPresent(user::changeAffiliation);
-        }
+        Affiliation affiliation = affiliationRepository.findById(request.getAffiliationId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 소속입니다"));
+        user.changeAffiliation(affiliation);
 
         userRepository.save(user);
     }
@@ -122,8 +120,7 @@ public class AuthService {
                         request.getEmail(), request.getName(), request.getTtorae())
                 .orElseThrow(UserIdentityNotFoundException::new);
 
-        Long userAffId = user.getAffiliation() != null ? user.getAffiliation().getId() : null;
-        if (!Objects.equals(userAffId, request.getAffiliationId())) {
+        if (!user.getAffiliation().getId().equals(request.getAffiliationId())) {
             throw new UserIdentityNotFoundException();
         }
     }
@@ -138,8 +135,7 @@ public class AuthService {
                         request.getEmail(), request.getName(), request.getTtorae())
                 .orElseThrow(UserIdentityNotFoundException::new);
 
-        Long userAffId = user.getAffiliation() != null ? user.getAffiliation().getId() : null;
-        if (!Objects.equals(userAffId, request.getAffiliationId())) {
+        if (!user.getAffiliation().getId().equals(request.getAffiliationId())) {
             throw new UserIdentityNotFoundException();
         }
 

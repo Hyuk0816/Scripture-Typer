@@ -24,5 +24,6 @@ public class SignupRequest {
     @NotBlank(message = "비밀번호는 필수입니다")
     private String password;
 
+    @NotNull(message = "소속은 필수입니다")
     private Long affiliationId;
 }

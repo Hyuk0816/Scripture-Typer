@@ -14,6 +14,7 @@ public class VerifyIdentityRequest {
     @NotNull(message = "또래는 필수입니다")
     private Integer ttorae;
 
+    @NotNull(message = "소속은 필수입니다")
     private Long affiliationId;
 
     @Email(message = "올바른 이메일 형식이 아닙니다")

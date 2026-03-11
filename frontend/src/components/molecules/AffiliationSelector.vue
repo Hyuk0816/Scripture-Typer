@@ -64,7 +64,7 @@ watch(filteredSubs, (subs) => {
         v-model="selectedMain"
         class="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all bg-white"
       >
-        <option value="">소속 선택 (선택사항)</option>
+        <option value="">소속을 선택하세요</option>
         <option v-for="main in mainOptions" :key="main" :value="main">
           {{ MAIN_AFFILIATION_LABELS[main] }}
         </option>

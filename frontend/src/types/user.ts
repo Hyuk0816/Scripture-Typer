@@ -14,7 +14,7 @@ export interface ChangePasswordRequest {
 export interface VerifyIdentityRequest {
   name: string
   ttorae: number
-  affiliationId: number | null
+  affiliationId: number
   email: string
 }
 

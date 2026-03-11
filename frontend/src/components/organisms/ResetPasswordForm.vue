@@ -23,6 +23,7 @@ const errors = reactive({
   name: '',
   ttorae: '',
   email: '',
+  affiliationId: '',
 })
 
 const loading = ref(false)
@@ -33,6 +34,7 @@ function validate(): boolean {
   errors.name = ''
   errors.ttorae = ''
   errors.email = ''
+  errors.affiliationId = ''
 
   if (!form.name.trim()) {
     errors.name = '이름을 입력해주세요'
@@ -40,6 +42,10 @@ function validate(): boolean {
   }
   if (!form.ttorae) {
     errors.ttorae = '또래를 입력해주세요'
+    valid = false
+  }
+  if (!form.affiliationId) {
+    errors.affiliationId = '소속을 선택해주세요'
     valid = false
   }
   if (!form.email.trim()) {
@@ -99,6 +105,7 @@ async function handleSubmit() {
     />
 
     <AffiliationSelector v-model="form.affiliationId" />
+    <p v-if="errors.affiliationId" class="text-red-500 text-xs mt-1">{{ errors.affiliationId }}</p>
 
     <FormField
       id="email"
