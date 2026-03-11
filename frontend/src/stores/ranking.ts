@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { rankingApi } from '@/utils/api'
 import type {
@@ -13,17 +13,21 @@ export const useRankingStore = defineStore('ranking', () => {
   const overallRanking = ref<RankingEntryResponse[]>([])
   const affiliationRanking = ref<AffiliationRankingResponse | null>(null)
   const sarangbangRanking = ref<GroupRankingResponse[]>([])
+  const monthlyRanking = ref<RankingEntryResponse[]>([])
   const loading = ref(false)
 
+  const now = new Date()
+  const selectedYear = ref(now.getFullYear())
+  const selectedMonth = ref(now.getMonth() + 1)
+
+  const isSarangbang = computed(() => affiliationRanking.value?.mainAffiliation === 'SARANGBANG')
+
   async function fetchOverallRanking(limit = 20) {
-    loading.value = true
     try {
       const { data } = await rankingApi.getRanking(mode.value, limit)
       overallRanking.value = data
     } catch (e) {
       console.error('fetchOverallRanking failed:', e)
-    } finally {
-      loading.value = false
     }
   }
 
@@ -45,13 +49,32 @@ export const useRankingStore = defineStore('ranking', () => {
     }
   }
 
+  async function fetchMonthlyRanking(limit = 20) {
+    try {
+      const { data } = await rankingApi.getMonthlyRanking(mode.value, selectedYear.value, selectedMonth.value, limit)
+      monthlyRanking.value = data
+    } catch (e) {
+      console.error('fetchMonthlyRanking failed:', e)
+    }
+  }
+
+  function setMonthlyPeriod(year: number, month: number) {
+    selectedYear.value = year
+    selectedMonth.value = month
+    fetchMonthlyRanking()
+  }
+
   async function fetchAll() {
     loading.value = true
     try {
       await Promise.allSettled([
         fetchOverallRanking(),
         fetchAffiliationRanking(),
+        fetchMonthlyRanking(),
       ])
+      if (affiliationRanking.value?.mainAffiliation === 'SARANGBANG') {
+        await fetchSarangbangRanking()
+      }
     } finally {
       loading.value = false
     }
@@ -66,11 +89,17 @@ export const useRankingStore = defineStore('ranking', () => {
     overallRanking,
     affiliationRanking,
     sarangbangRanking,
+    monthlyRanking,
+    selectedYear,
+    selectedMonth,
+    isSarangbang,
     loading,
     fetchOverallRanking,
     fetchAffiliationRanking,
     fetchSarangbangRanking,
+    fetchMonthlyRanking,
     fetchAll,
     setMode,
+    setMonthlyPeriod,
   }
 })

@@ -30,6 +30,7 @@ public class CacheConfig {
                 "bible:chapter", defaultConfig.entryTtl(Duration.ofHours(24)),
                 "ranking:top", defaultConfig.entryTtl(Duration.ofMinutes(5)),
                 "ranking:sarangbang", defaultConfig.entryTtl(Duration.ofMinutes(5)),
+                "ranking:monthly", defaultConfig.entryTtl(Duration.ofMinutes(30)),
                 "board:list", defaultConfig.entryTtl(Duration.ofMinutes(5)),
                 "board:detail", defaultConfig.entryTtl(Duration.ofMinutes(10))
         );
