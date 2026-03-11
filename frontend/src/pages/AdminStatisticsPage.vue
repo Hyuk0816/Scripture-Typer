@@ -43,6 +43,12 @@ onMounted(fetchData)
             회원 관리
           </router-link>
           <router-link
+            to="/admin/affiliations"
+            class="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            소속 관리
+          </router-link>
+          <router-link
             to="/admin/stats"
             class="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white"
           >

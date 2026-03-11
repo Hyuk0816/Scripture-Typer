@@ -200,6 +200,15 @@ export const adminApi = {
   updateUserAffiliation(userId: number, affiliationId: number | null) {
     return api.patch<void>(`/admin/users/${userId}/affiliation`, { affiliationId })
   },
+  getAffiliations() {
+    return api.get<AffiliationResponse[]>('/admin/affiliations')
+  },
+  createAffiliation(data: { mainAffiliation: MainAffiliation; subAffiliation?: string; displayName: string }) {
+    return api.post<AffiliationResponse>('/admin/affiliations', data)
+  },
+  deleteAffiliation(id: number) {
+    return api.delete<void>(`/admin/affiliations/${id}`)
+  },
 }
 
 // --- Bible API ---

@@ -1,8 +1,11 @@
 package com.scriptuotyper.controller;
 
+import com.scriptuotyper.domain.affiliation.MainAffiliation;
 import com.scriptuotyper.domain.user.UserStatus;
 import com.scriptuotyper.dto.admin.UserListResponse;
+import com.scriptuotyper.dto.affiliation.AffiliationResponse;
 import com.scriptuotyper.service.AdminService;
+import com.scriptuotyper.service.AffiliationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +20,7 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
+    private final AffiliationService affiliationService;
 
     @PatchMapping("/users/{id}/activate")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -45,5 +49,27 @@ public class AdminController {
             @PathVariable Long id,
             @RequestBody Map<String, Long> body) {
         adminService.updateUserAffiliation(id, body.get("affiliationId"));
+    }
+
+    // --- Affiliation CRUD (admin only) ---
+
+    @GetMapping("/affiliations")
+    public List<AffiliationResponse> getAffiliations() {
+        return affiliationService.getAllAffiliations();
+    }
+
+    @PostMapping("/affiliations")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AffiliationResponse createAffiliation(@RequestBody Map<String, String> body) {
+        MainAffiliation main = MainAffiliation.valueOf(body.get("mainAffiliation"));
+        String sub = body.get("subAffiliation");
+        String displayName = body.get("displayName");
+        return affiliationService.createAffiliation(main, sub, displayName);
+    }
+
+    @DeleteMapping("/affiliations/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteAffiliation(@PathVariable Long id) {
+        affiliationService.deleteAffiliation(id);
     }
 }
