@@ -15,7 +15,7 @@ const statusMap: Record<UserStatus, { label: string; variant: 'amber' | 'green' 
 
 const roleMap: Record<Role, { label: string; variant: 'amber' | 'green' | 'red' | 'gray' | 'blue' }> = {
   ADMIN: { label: '관리자', variant: 'red' },
-  PASTOR: { label: '목사', variant: 'blue' },
+  PASTOR: { label: '교역자', variant: 'blue' },
   MOKJANG: { label: '목장', variant: 'green' },
   USER: { label: '일반', variant: 'gray' },
 }

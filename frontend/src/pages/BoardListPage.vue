@@ -137,7 +137,9 @@ onMounted(() => {
           <h3 class="font-semibold text-gray-800 truncate flex-1">{{ post.title }}</h3>
         </div>
         <div class="flex items-center gap-3 text-xs text-gray-400 mt-2">
-          <span>{{ post.authorName }}</span>
+          <span>
+            <span v-if="post.authorRole === 'PASTOR'" class="text-blue-600 font-medium">[교역자] </span>{{ post.authorName }}
+          </span>
           <span>{{ formatDate(post.createdAt) }}</span>
           <span v-if="post.replyCount > 0" class="text-amber-600 font-medium">
             답글 {{ post.replyCount }}

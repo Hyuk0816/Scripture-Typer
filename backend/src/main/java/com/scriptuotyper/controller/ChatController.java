@@ -67,4 +67,12 @@ public class ChatController {
             @AuthenticationPrincipal Long userId) {
         chatService.deleteSession(id, userId);
     }
+
+    @DeleteMapping("/sessions/batch")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteSessionsBatch(
+            @RequestBody List<Long> sessionIds,
+            @AuthenticationPrincipal Long userId) {
+        chatService.deleteSessionsBatch(sessionIds, userId);
+    }
 }

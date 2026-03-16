@@ -5,6 +5,7 @@ export interface BoardListItem {
   postType: PostType
   title: string
   authorName: string
+  authorRole: string
   replyCount: number
   createdAt: string
 }

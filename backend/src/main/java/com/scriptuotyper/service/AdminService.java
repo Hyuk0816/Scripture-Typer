@@ -2,6 +2,7 @@ package com.scriptuotyper.service;
 
 import com.scriptuotyper.common.exception.user.UserNotFoundException;
 import com.scriptuotyper.domain.affiliation.Affiliation;
+import com.scriptuotyper.domain.user.Role;
 import com.scriptuotyper.domain.user.User;
 import com.scriptuotyper.domain.user.UserStatus;
 import com.scriptuotyper.dto.admin.UserListResponse;
@@ -49,6 +50,13 @@ public class AdminService {
         return userRepository.findAllWithAffiliation().stream()
                 .map(UserListResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public void updateUserRole(Long userId, Role role) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+        user.changeRole(role);
     }
 
     @Transactional

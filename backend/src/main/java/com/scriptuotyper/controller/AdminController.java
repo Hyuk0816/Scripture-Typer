@@ -1,6 +1,7 @@
 package com.scriptuotyper.controller;
 
 import com.scriptuotyper.domain.affiliation.MainAffiliation;
+import com.scriptuotyper.domain.user.Role;
 import com.scriptuotyper.domain.user.UserStatus;
 import com.scriptuotyper.dto.admin.UserListResponse;
 import com.scriptuotyper.dto.affiliation.AffiliationResponse;
@@ -41,6 +42,13 @@ public class AdminController {
                 ? adminService.getUsersByStatus(status)
                 : adminService.getAllUsers();
         return ResponseEntity.ok(users);
+    }
+
+    @PatchMapping("/users/{id}/role")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Role role = Role.valueOf(body.get("role"));
+        adminService.updateUserRole(id, role);
     }
 
     @PatchMapping("/users/{id}/affiliation")

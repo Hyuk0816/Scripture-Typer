@@ -40,6 +40,16 @@ onMounted(async () => {
   }
 })
 
+async function handleRoleChange(userId: number, role: string) {
+  actionLoading.value = userId
+  try {
+    await adminApi.updateUserRole(userId, role)
+    emit('refresh')
+  } finally {
+    actionLoading.value = null
+  }
+}
+
 async function handleAffiliationChange(userId: number, affiliationId: number | null) {
   actionLoading.value = userId
   try {
@@ -104,7 +114,16 @@ function formatDate(dateStr: string): string {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="font-medium text-gray-800">{{ user.name }}</span>
-              <StatusBadge type="role" :value="user.role" />
+              <select
+                :value="user.role"
+                class="text-xs border border-gray-200 rounded-lg px-2 py-1"
+                @change="handleRoleChange(user.id, ($event.target as HTMLSelectElement).value)"
+              >
+                <option value="USER">일반</option>
+                <option value="PASTOR">교역자</option>
+                <option value="MOKJANG">목장</option>
+                <option value="ADMIN">관리자</option>
+              </select>
               <StatusBadge type="status" :value="user.status" />
             </div>
             <div class="flex gap-2 shrink-0 ml-2">
@@ -169,7 +188,16 @@ function formatDate(dateStr: string): string {
           <td class="px-6 py-4 text-sm text-gray-600">{{ user.email }}</td>
           <td class="px-6 py-4 text-sm text-gray-600">{{ user.ttorae }}</td>
           <td class="px-6 py-4">
-            <StatusBadge type="role" :value="user.role" />
+            <select
+              :value="user.role"
+              class="text-xs border border-gray-200 rounded-lg px-2 py-1 w-24"
+              @change="handleRoleChange(user.id, ($event.target as HTMLSelectElement).value)"
+            >
+              <option value="USER">일반</option>
+              <option value="PASTOR">교역자</option>
+              <option value="MOKJANG">목장</option>
+              <option value="ADMIN">관리자</option>
+            </select>
           </td>
           <td class="px-6 py-4">
             <StatusBadge type="status" :value="user.status" />

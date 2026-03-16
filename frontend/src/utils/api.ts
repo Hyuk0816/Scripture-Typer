@@ -220,6 +220,9 @@ export const adminApi = {
   deactivateUser(id: number) {
     return api.patch<void>(`/admin/users/${id}/deactivate`)
   },
+  updateUserRole(userId: number, role: string) {
+    return api.patch<void>(`/admin/users/${userId}/role`, { role })
+  },
   updateUserAffiliation(userId: number, affiliationId: number | null) {
     return api.patch<void>(`/admin/users/${userId}/affiliation`, { affiliationId })
   },
@@ -389,6 +392,9 @@ export const chatApi = {
   },
   deleteSession(sessionId: number) {
     return api.delete<void>(`/chat/sessions/${sessionId}`)
+  },
+  deleteSessionsBatch(sessionIds: number[]) {
+    return api.delete<void>('/chat/sessions/batch', { data: sessionIds })
   },
   getUsage() {
     return api.get<ChatUsage>('/chat/usage')
