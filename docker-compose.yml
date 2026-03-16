@@ -15,7 +15,7 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: scripture-typer-tunnel
-    command: tunnel run
+    command: tunnel --no-autoupdate run --protocol quic
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
