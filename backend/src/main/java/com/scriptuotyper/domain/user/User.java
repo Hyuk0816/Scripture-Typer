@@ -27,7 +27,7 @@ public class User {
     private String name;
 
     @Column(nullable = false)
-    private Integer ttorae;
+    private String ttorae;
 
     @Column(nullable = false)
     private String phone;
@@ -59,7 +59,7 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(String name, Integer ttorae, String phone, String email, String password) {
+    public User(String name, String ttorae, String phone, String email, String password) {
         this.name = name;
         this.ttorae = ttorae;
         this.phone = phone;

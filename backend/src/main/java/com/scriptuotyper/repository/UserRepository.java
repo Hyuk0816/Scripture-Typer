@@ -37,5 +37,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.affiliation WHERE u.status = :status")
     List<User> findByStatusWithAffiliation(@Param("status") UserStatus status);
 
-    Optional<User> findByEmailAndNameAndTtorae(String email, String name, Integer ttorae);
+    Optional<User> findByEmailAndNameAndTtorae(String email, String name, String ttorae);
 }

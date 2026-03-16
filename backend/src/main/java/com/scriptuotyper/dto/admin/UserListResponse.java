@@ -14,7 +14,7 @@ public class UserListResponse {
 
     private Long id;
     private String name;
-    private Integer ttorae;
+    private String ttorae;
     private String phone;
     private String email;
     private Role role;

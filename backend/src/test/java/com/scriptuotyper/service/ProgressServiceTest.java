@@ -52,7 +52,7 @@ class ProgressServiceTest {
     void setUp() {
         testUser = User.builder()
                 .name("테스트")
-                .ttorae(1)
+                .ttorae("1")
                 .phone("010-1234-5678")
                 .email("test@test.com")
                 .password("password123")

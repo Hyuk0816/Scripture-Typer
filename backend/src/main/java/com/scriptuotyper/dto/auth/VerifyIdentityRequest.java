@@ -11,8 +11,8 @@ public class VerifyIdentityRequest {
     @NotBlank(message = "이름은 필수입니다")
     private String name;
 
-    @NotNull(message = "또래는 필수입니다")
-    private Integer ttorae;
+    @NotBlank(message = "또래는 필수입니다")
+    private String ttorae;
 
     @NotNull(message = "소속은 필수입니다")
     private Long affiliationId;

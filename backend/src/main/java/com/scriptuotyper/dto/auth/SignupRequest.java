@@ -11,8 +11,8 @@ public class SignupRequest {
     @NotBlank(message = "이름은 필수입니다")
     private String name;
 
-    @NotNull(message = "또래는 필수입니다")
-    private Integer ttorae;
+    @NotBlank(message = "또래는 필수입니다")
+    private String ttorae;
 
     @NotBlank(message = "전화번호는 필수입니다")
     private String phone;
