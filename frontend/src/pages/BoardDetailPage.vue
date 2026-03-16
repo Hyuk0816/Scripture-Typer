@@ -53,7 +53,7 @@ function postTypeLabel(postType: string) {
 function roleLabel(role: string) {
   switch (role) {
     case 'ADMIN': return '관리자'
-    case 'PASTOR': return '목사'
+    case 'PASTOR': return '교역자'
     case 'MOKJANG': return '목장'
     default: return ''
   }
@@ -149,12 +149,8 @@ onMounted(async () => {
         </div>
         <h1 class="text-xl font-bold text-gray-800 mb-3">{{ board.title }}</h1>
         <div class="flex items-center gap-3 text-sm text-gray-500 mb-4 pb-4 border-b border-gray-100">
-          <span class="font-medium text-gray-700">{{ board.authorName }}</span>
-          <span
-            v-if="roleLabel(board.authorRole)"
-            class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500"
-          >
-            {{ roleLabel(board.authorRole) }}
+          <span class="font-medium text-gray-700">
+            <span v-if="board.authorRole === 'PASTOR'" class="text-blue-600">[교역자] </span>{{ board.authorName }}
           </span>
           <span>{{ formatDateTime(board.createdAt) }}</span>
         </div>
@@ -195,12 +191,8 @@ onMounted(async () => {
             class="bg-white rounded-xl shadow-sm border border-gray-100 p-4"
           >
             <div class="flex items-center gap-2 mb-2">
-              <span class="text-sm font-medium text-gray-700">{{ reply.authorName }}</span>
-              <span
-                v-if="roleLabel(reply.authorRole)"
-                class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500"
-              >
-                {{ roleLabel(reply.authorRole) }}
+              <span class="text-sm font-medium text-gray-700">
+                <span v-if="reply.authorRole === 'PASTOR'" class="text-blue-600">[교역자] </span>{{ reply.authorName }}
               </span>
               <span class="text-xs text-gray-400">{{ formatDateTime(reply.createdAt) }}</span>
             </div>

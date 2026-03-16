@@ -9,6 +9,7 @@ public record BoardListResponse(
         String postType,
         String title,
         String authorName,
+        String authorRole,
         int replyCount,
         LocalDateTime createdAt
 ) {
@@ -18,6 +19,7 @@ public record BoardListResponse(
                 board.getPostType().name(),
                 board.getTitle(),
                 board.getUser().getName(),
+                board.getUser().getRole().name(),
                 board.getReplies().size(),
                 board.getCreatedAt()
         );

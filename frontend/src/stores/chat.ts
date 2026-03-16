@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { ChatMessage, ChatSession, ChatUsage } from '@/types/chat'
 import { chatApi, getAccessToken } from '@/utils/api'
+import { computed } from 'vue'
 import { useUiStore } from '@/stores/ui'
 
 export const useChatStore = defineStore('chat', () => {
@@ -13,6 +14,9 @@ export const useChatStore = defineStore('chat', () => {
   const view = ref<'chat' | 'list'>('chat')
   const usage = ref<ChatUsage>({ used: 0, limit: 5, unlimited: false })
   const isFullscreen = ref(false)
+  const deleteMode = ref(false)
+  const selectedSessions = ref<Set<number>>(new Set())
+  const selectedCount = computed(() => selectedSessions.value.size)
 
   function toggleChat() {
     const opening = !isOpen.value
@@ -229,6 +233,47 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = messages.value.map((m) => (m.id === id ? { ...m, content } : m))
   }
 
+  function toggleDeleteMode() {
+    deleteMode.value = !deleteMode.value
+    if (!deleteMode.value) {
+      selectedSessions.value = new Set()
+    }
+  }
+
+  function toggleSelectSession(id: number) {
+    const next = new Set(selectedSessions.value)
+    if (next.has(id)) {
+      next.delete(id)
+    } else {
+      next.add(id)
+    }
+    selectedSessions.value = next
+  }
+
+  function selectAllSessions() {
+    if (selectedSessions.value.size === sessions.value.length) {
+      selectedSessions.value = new Set()
+    } else {
+      selectedSessions.value = new Set(sessions.value.map((s) => s.id))
+    }
+  }
+
+  async function deleteSelectedSessions() {
+    if (selectedSessions.value.size === 0) return
+    try {
+      await chatApi.deleteSessionsBatch([...selectedSessions.value])
+      if (currentSessionId.value && selectedSessions.value.has(currentSessionId.value)) {
+        currentSessionId.value = null
+        messages.value = []
+      }
+      selectedSessions.value = new Set()
+      deleteMode.value = false
+      await fetchSessions()
+    } catch {
+      // silent
+    }
+  }
+
   function clearMessages() {
     messages.value = []
     currentSessionId.value = null
@@ -243,6 +288,8 @@ export const useChatStore = defineStore('chat', () => {
     view.value = 'chat'
     usage.value = { used: 0, limit: 5, unlimited: false }
     isFullscreen.value = false
+    deleteMode.value = false
+    selectedSessions.value = new Set()
   }
 
   return {
@@ -263,6 +310,13 @@ export const useChatStore = defineStore('chat', () => {
     deleteSession,
     fetchUsage,
     sendMessage,
+    deleteMode,
+    selectedSessions,
+    selectedCount,
+    toggleDeleteMode,
+    toggleSelectSession,
+    selectAllSessions,
+    deleteSelectedSessions,
     clearMessages,
     resetStore,
   }

@@ -100,6 +100,17 @@ public class ChatService {
         chatSessionRepository.delete(session);
     }
 
+    @Transactional
+    public void deleteSessionsBatch(List<Long> sessionIds, Long userId) {
+        List<ChatSession> sessions = chatSessionRepository.findAllById(sessionIds);
+        for (ChatSession session : sessions) {
+            if (!session.getUser().getId().equals(userId)) {
+                throw new ChatSessionNotFoundException();
+            }
+        }
+        chatSessionRepository.deleteAll(sessions);
+    }
+
     public ChatUsageResponse getUsage(Long userId) {
         return geminiUsageService.getUsageToday(userId);
     }
