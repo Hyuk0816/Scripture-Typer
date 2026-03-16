@@ -10,7 +10,7 @@ public class UserProfileResponse {
 
     private String email;
     private String name;
-    private Integer ttorae;
+    private String ttorae;
     private String affiliationName;
 
     public static UserProfileResponse from(User user) {

@@ -1,7 +1,7 @@
 export interface UserProfileResponse {
   email: string
   name: string
-  ttorae: number
+  ttorae: string
   affiliationName: string | null
 }
 
@@ -13,7 +13,7 @@ export interface ChangePasswordRequest {
 
 export interface VerifyIdentityRequest {
   name: string
-  ttorae: number
+  ttorae: string
   affiliationId: number | null
   email: string
 }

@@ -14,7 +14,7 @@ const emit = defineEmits<{
 
 const form = reactive<VerifyIdentityRequest>({
   name: '',
-  ttorae: 0,
+  ttorae: '',
   affiliationId: null,
   email: '',
 })
@@ -40,7 +40,7 @@ function validate(): boolean {
     errors.name = '이름을 입력해주세요'
     valid = false
   }
-  if (!form.ttorae) {
+  if (!form.ttorae.trim()) {
     errors.ttorae = '또래를 입력해주세요'
     valid = false
   }
@@ -96,9 +96,9 @@ async function handleSubmit() {
 
     <FormField
       id="ttorae"
-      v-model.number="form.ttorae"
+      v-model="form.ttorae"
       label="또래"
-      type="number"
+      type="text"
       placeholder="또래를 입력하세요"
       :error="errors.ttorae"
       required

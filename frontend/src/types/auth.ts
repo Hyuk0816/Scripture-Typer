@@ -4,7 +4,7 @@ export type UserStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE'
 
 export interface SignupRequest {
   name: string
-  ttorae: number
+  ttorae: string
   phone: string
   email: string
   password: string
@@ -28,7 +28,7 @@ export interface TokenResponse {
 export interface UserListResponse {
   id: number
   name: string
-  ttorae: number
+  ttorae: string
   phone: string
   email: string
   role: Role

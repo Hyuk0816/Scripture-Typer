@@ -15,7 +15,7 @@ const affiliationId = ref<number | null>(null)
 
 const form = reactive<SignupRequest & { passwordConfirm: string }>({
   name: '',
-  ttorae: 0,
+  ttorae: '',
   phone: '',
   email: '',
   password: '',
@@ -48,7 +48,7 @@ function validate(): boolean {
     valid = false
   }
 
-  if (!form.ttorae || form.ttorae <= 0) {
+  if (!form.ttorae.trim()) {
     errors.ttorae = '또래를 입력해주세요'
     valid = false
   }
@@ -140,9 +140,9 @@ async function handleSubmit() {
 
     <FormField
       id="ttorae"
-      v-model.number="form.ttorae"
+      v-model="form.ttorae"
       label="또래"
-      type="number"
+      type="text"
       placeholder="또래를 입력하세요"
       :error="errors.ttorae"
       required
