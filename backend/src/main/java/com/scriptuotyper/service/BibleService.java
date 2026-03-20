@@ -1,12 +1,15 @@
 package com.scriptuotyper.service;
 
+import com.scriptuotyper.domain.bible.Bible;
 import com.scriptuotyper.dto.bible.*;
 import com.scriptuotyper.repository.BibleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,6 +33,17 @@ public class BibleService {
                 grouped.getOrDefault("OLD", List.of()),
                 grouped.getOrDefault("NEW", List.of())
         );
+    }
+
+    @Cacheable(value = "bible:dailyVerse", key = "#date")
+    public DailyVerseResponse getDailyVerse(LocalDate date) {
+        long totalCount = bibleRepository.count();
+        int hash = date.toString().hashCode() & 0x7fffffff;
+        int offset = (int) (hash % totalCount);
+
+        List<Bible> result = bibleRepository.findAllWithOffset(PageRequest.of(offset, 1));
+        Bible bible = result.get(0);
+        return DailyVerseResponse.from(bible);
     }
 
     @Cacheable(value = "bible:chapter", key = "#bookName + ':' + #chapter")

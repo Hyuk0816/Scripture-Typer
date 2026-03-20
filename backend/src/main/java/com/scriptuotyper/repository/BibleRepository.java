@@ -4,6 +4,7 @@ import com.scriptuotyper.domain.bible.Bible;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface BibleRepository extends JpaRepository<Bible, Long> {
@@ -18,6 +19,9 @@ public interface BibleRepository extends JpaRepository<Bible, Long> {
 
     @Query("SELECT MAX(b.chapter) FROM Bible b WHERE b.bookName = :bookName")
     Integer findMaxChapterByBookName(@org.springframework.data.repository.query.Param("bookName") String bookName);
+
+    @Query("SELECT b FROM Bible b ORDER BY b.id")
+    List<Bible> findAllWithOffset(Pageable pageable);
 
     interface BookProjection {
         String getBookName();
