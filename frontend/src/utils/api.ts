@@ -246,6 +246,9 @@ export const bibleApi = {
   getChapter(bookName: string, chapter: number) {
     return api.get<ChapterResponse>(`/bible/${bookName}/${chapter}`)
   },
+  getDailyVerse() {
+    return api.get<{ bookName: string; chapter: number; verse: number; content: string }>('/bible/daily-verse')
+  },
 }
 
 // --- Progress API ---

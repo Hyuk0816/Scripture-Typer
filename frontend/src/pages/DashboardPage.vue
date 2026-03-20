@@ -1,15 +1,30 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProgressStore } from '@/stores/progress'
+import { bibleApi } from '@/utils/api'
 import Spinner from '@/components/atoms/Spinner.vue'
 
 const router = useRouter()
 const progressStore = useProgressStore()
 
-onMounted(() => {
+const dailyVerse = ref<{ bookName: string; chapter: number; verse: number; content: string } | null>(null)
+
+function todayString(): string {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}.${m}.${day}`
+}
+
+onMounted(async () => {
   progressStore.fetchLatest()
-  progressStore.fetchTopRanking(3)
+  try {
+    const { data } = await bibleApi.getDailyVerse()
+    dailyVerse.value = data
+  } catch {
+    // silent
+  }
 })
 
 function navigateTyping() {
@@ -29,6 +44,34 @@ function navigateReading() {
     <div class="text-center mb-10 mt-8">
       <h1 class="text-3xl font-bold text-gray-800 mb-3">Scripture Typer</h1>
       <p class="text-gray-500">성경을 타이핑하며 말씀을 묵상하세요</p>
+    </div>
+
+    <!-- 오늘의 말씀 -->
+    <div v-if="dailyVerse" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-gray-700">오늘의 말씀</h2>
+        <span class="text-xs text-gray-400">{{ todayString() }}</span>
+      </div>
+      <p class="text-sm text-amber-700 font-medium mb-2">
+        {{ dailyVerse.bookName }} {{ dailyVerse.chapter }}장 {{ dailyVerse.verse }}절
+      </p>
+      <p class="text-gray-700 leading-relaxed text-[15px]">
+        {{ dailyVerse.content }}
+      </p>
+      <div class="flex gap-2 mt-4 justify-end">
+        <button
+          @click="router.push(`/reading/${dailyVerse.bookName}/${dailyVerse.chapter}`)"
+          class="px-4 py-2 text-xs font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+        >
+          통독하러 가기
+        </button>
+        <button
+          @click="router.push(`/typing/${dailyVerse.bookName}/${dailyVerse.chapter}`)"
+          class="px-4 py-2 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
+        >
+          필사하러 가기
+        </button>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -95,29 +138,6 @@ function navigateReading() {
         <div class="text-4xl mb-4">📖</div>
         <h2 class="text-lg font-semibold text-gray-700 mb-2">처음 오셨군요!</h2>
         <p class="text-gray-500 text-sm">사이드바에서 원하는 책과 장을 선택하여 시작하세요.</p>
-      </div>
-
-      <!-- 필사 랭킹 Top 3 -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
-        <h2 class="text-lg font-semibold text-gray-700 mb-4">필사 랭킹</h2>
-        <div v-if="progressStore.topRanking.length > 0" class="space-y-3">
-          <div
-            v-for="entry in progressStore.topRanking"
-            :key="entry.userId"
-            class="flex items-center gap-3 px-3 py-2 rounded-lg"
-            :class="{
-              'bg-amber-50': entry.rank === 1,
-              'bg-gray-50': entry.rank !== 1,
-            }"
-          >
-            <span class="text-2xl w-8 text-center">
-              {{ entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : '🥉' }}
-            </span>
-            <span class="flex-1 font-medium text-gray-800">{{ entry.name }}</span>
-            <span class="text-sm text-gray-500">{{ entry.completedChapters }}장 완료</span>
-          </div>
-        </div>
-        <p v-else class="text-sm text-gray-400 text-center py-2">아직 필사를 완료한 사람이 없습니다</p>
       </div>
     </template>
   </div>
